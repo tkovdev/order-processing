@@ -1,44 +1,9 @@
-import { Kafka } from 'kafkajs';
-
-const KAFKA_BROKER = process.env.KAFKA_BROKER || 'kafka:29092';
-
-const topic = `shipping.state`;
-
-const kafka = new Kafka({ clientId: `shipping`, brokers: [KAFKA_BROKER] });
-const consumer = kafka.consumer({ groupId: `shipping` });
-const producer = kafka.producer();
-
-async function publish(type: string, payload?: Record<string, unknown>): Promise<void> {
-  await producer.send({
-    topic,
-    messages: [{ key: 'shipping', value: JSON.stringify({ type, payload }) }],
-  });
-}
+import { start as startExternalStateHandler, stop as stopExternalStateHandler } from './externalStateHandler';
+import { start as startInternalStateHandler, stop as stopInternalStateHandler } from './internalStateHandler';
 
 async function start(): Promise<void> {
-  await producer.connect();
-  await consumer.connect();
-  await consumer.subscribe({ topic, fromBeginning: false });
-
-  await consumer.run({
-    eachMessage: async ({ message }) => {
-      if (!message.value) return;
-      const event = JSON.parse(message.value.toString());
-
-      console.log(`[shipping: received: ${event.type}]`);
-
-      if (event.type === 'SHIPPING_REQUESTED') {
-        console.log(`Shipping requested`);
-        await publish('SHIPPING_IN_PROGRESS');
-      }
-
-      if (event.type === 'SHIPPING_SENT') {
-        console.log(`Shipping sent`);
-        await publish('SHIPPING_DONE');
-        process.exit(0);
-      }
-    },
-  });
+  await startExternalStateHandler();
+  await startInternalStateHandler();
 
   console.log(`Shipping process started, listening for events...`);
 }
@@ -49,7 +14,7 @@ start().catch(err => {
 });
 
 process.on('SIGTERM', async () => {
-  await consumer.disconnect();
-  await producer.disconnect();
+  await stopExternalStateHandler();
+  await stopInternalStateHandler();
   process.exit(0);
 });
