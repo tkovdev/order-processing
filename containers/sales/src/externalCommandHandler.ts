@@ -1,5 +1,5 @@
 import { Kafka } from 'kafkajs';
-import { publishState } from './stateHandler';
+import { publishState } from './internalStateHandler';
 
 /**
  * This module handles incoming commands from the API and updates the sales state accordingly. 

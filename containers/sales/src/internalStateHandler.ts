@@ -10,7 +10,6 @@ const consumer = kafka.consumer({ groupId: `sales-state` });
 const producer = kafka.producer();
 
 export async function publishState(type: string, payload?: string): Promise<void> {
-    console.info(`stateHandler.publishState: STARTED: ${type}`);
     console.info(`stateHandler.publishState: send to producer for: '${topic}'`);
     const command = {
         commandId: randomUUID(),
@@ -21,20 +20,21 @@ export async function publishState(type: string, payload?: string): Promise<void
     await producer.send({
         topic,
         messages: [{ key: randomUUID(), value: JSON.stringify(command) }],
+    }).catch((error) => {
+        console.error(`Failed to publish state: ${error}`);
     });
-    console.info(`stateHandler.publishState: END: ${type}`);
 }
 
 export async function start(): Promise<void> {
-    console.info(`stateHandler.start: START`);
-    console.info(`stateHandler.start: connect to consumer for: '${topic}'`);
-    await consumer.connect();
-    console.info(`stateHandler.start: connect to producer for: '${topic}'`);
-    await producer.connect();
-    console.info(`stateHandler.start: subscribe to consumer for: '${topic}'`);
-    await consumer.subscribe({ topic, fromBeginning: false });
+    try {
+        await consumer.connect();
+        await producer.connect();
+        await consumer.subscribe({ topic, fromBeginning: false });
+    } catch (error) {
+        console.error(`Failed to connect to Kafka: ${error}`);
+        process.exit(1);
+    }
     
-    console.info(`stateHandler.start: process messages from consumer for: '${topic}'`);
     await consumer.run({
         eachMessage: async ({ message }) => {
             if (!message.value) return;
@@ -49,19 +49,21 @@ export async function start(): Promise<void> {
 
             if (event.type === 'SALE_COMPLETED') {
                 console.log(`Sale completed`);
-                await publishState('SALE_DONE');
+                await publishState('PROCEED_TO_ORDER');
             }
         }
+    }).catch((error) => {
+        console.error(`Failed to run consumer: ${error}`);
     });
-    console.info(`stateHandler.start: END`);
 }
 
 export async function stop(): Promise<void> {
-    console.info(`stateHandler.stop: STOP`);
-    await consumer.stop();
-    console.info(`stateHandler.stop: Disconnect consumer for: '${topic}'`);
-    await consumer.disconnect();
-    console.info(`stateHandler.stop: Disconnect producer for: '${topic}'`);
-    await producer.disconnect();
-    console.info(`stateHandler.stop: END`);
+    try {
+        await consumer.stop();
+        await consumer.disconnect();
+        await producer.disconnect();
+    } catch (error) {
+        console.error(`Failure occurred on stop: ${error}`);
+        process.exit(1);
+    }
 }

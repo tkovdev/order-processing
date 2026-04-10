@@ -1,9 +1,9 @@
-import { start as startCommandHandler, stop as stopCommandHandler } from './commandHandler';
-import { start as startStateHandler, stop as stopStateHandler } from './stateHandler';
+import { start as startExternalCommandHandler, stop as stopExternalCommandHandler } from './externalCommandHandler';
+import { start as startInternalStateHandler, stop as stopInternalStateHandler } from './internalStateHandler';
 
 async function start(): Promise<void> {
-  await startCommandHandler();
-  await startStateHandler();
+  await startExternalCommandHandler();
+  await startInternalStateHandler();
 
   console.log(`Sales process started, listening for events...`);
 }
@@ -14,7 +14,7 @@ start().catch(err => {
 });
 
 process.on('SIGTERM', async () => {
-  await stopCommandHandler();
-  await stopStateHandler();
+  await stopExternalCommandHandler();
+  await stopInternalStateHandler();
   process.exit(0);
 });
