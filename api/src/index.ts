@@ -2,7 +2,6 @@ import express, { Request, Response } from 'express';
 import routes from './routes';
 import { connectToDatabase } from './db/connection';
 import { connectProducer, disconnectProducer } from './kafka/producer';
-import { startStateConsumer, disconnectConsumer } from './kafka/consumer';
 import { initializeTopics } from './kafka/topics';
 
 const app = express();
@@ -34,11 +33,6 @@ async function start(): Promise<void> {
     process.exit(1);
   });
 
-  await startStateConsumer().catch(err => {
-    console.error('Failed to start Kafka state consumer', err);
-    process.exit(1);
-  });
-
   app.listen(PORT, () => {
     console.log(`API running on port ${PORT}`);
   });
@@ -48,7 +42,6 @@ start();
 
 process.on('SIGTERM', async () => {
   await disconnectProducer();
-  await disconnectConsumer();
   process.exit(0);
 });
 

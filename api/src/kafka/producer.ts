@@ -2,13 +2,12 @@ import { Producer } from 'kafkajs';
 import { randomUUID } from 'crypto';
 import { kafka } from './client';
 
-export const COMMAND_TOPIC = 'factory.command';
+export const COMMAND_TOPIC = 'api.command';
 
-export interface FactoryCommand {
+export interface APICommand {
   commandId: string;
   type: string;
-  factoryId: string;
-  payload?: Record<string, unknown>;
+  payload?: unknown;
   timestamp: string;
 }
 
@@ -28,20 +27,19 @@ export const disconnectProducer = async (): Promise<void> => {
 
 export const publishCommand = async (
   type: string,
-  factoryId: string,
-  payload?: Record<string, unknown>
-): Promise<FactoryCommand> => {
-  const command: FactoryCommand = {
+  payload?: unknown
+): Promise<APICommand> => {
+  
+  const command: APICommand = {
     commandId: randomUUID(),
     type,
-    factoryId,
     payload,
     timestamp: new Date().toISOString(),
   };
 
   await producer.send({
     topic: COMMAND_TOPIC,
-    messages: [{ key: factoryId, value: JSON.stringify(command) }],
+    messages: [{ key: command.commandId, value: JSON.stringify(command) }],
   });
 
   return command;

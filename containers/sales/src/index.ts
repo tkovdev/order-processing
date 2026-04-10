@@ -1,44 +1,9 @@
-import { Kafka } from 'kafkajs';
-
-const KAFKA_BROKER = process.env.KAFKA_BROKER || 'kafka:29092';
-
-const topic = `sales.state`;
-
-const kafka = new Kafka({ clientId: `sales`, brokers: [KAFKA_BROKER] });
-const consumer = kafka.consumer({ groupId: `sales` });
-const producer = kafka.producer();
-
-async function publish(type: string, payload?: Record<string, unknown>): Promise<void> {
-  await producer.send({
-    topic,
-    messages: [{ key: 'sales', value: JSON.stringify({ type, payload }) }],
-  });
-}
+import { start as startCommandHandler, stop as stopCommandHandler } from './commandHandler';
+import { start as startStateHandler, stop as stopStateHandler } from './stateHandler';
 
 async function start(): Promise<void> {
-  await producer.connect();
-  await consumer.connect();
-  await consumer.subscribe({ topic, fromBeginning: false });
-
-  await consumer.run({
-    eachMessage: async ({ message }) => {
-      if (!message.value) return;
-      const event = JSON.parse(message.value.toString());
-
-      console.log(`[sales: received: ${event.type}]`);
-
-      if (event.type === 'SALE_SUBMITTED') {
-        console.log(`Sale submitted`);
-        await publish('SALE_IN_PROGRESS');
-      }
-
-      if (event.type === 'SALE_COMPLETED') {
-        console.log(`Sale completed`);
-        await publish('SALE_DONE');
-        process.exit(0);
-      }
-    },
-  });
+  await startCommandHandler();
+  await startStateHandler();
 
   console.log(`Sales process started, listening for events...`);
 }
@@ -49,7 +14,7 @@ start().catch(err => {
 });
 
 process.on('SIGTERM', async () => {
-  await consumer.disconnect();
-  await producer.disconnect();
+  await stopCommandHandler();
+  await stopStateHandler();
   process.exit(0);
 });
