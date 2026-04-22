@@ -1,0 +1,81 @@
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 left-0 right-0 h-16 bg-white shadow-md z-40">
+  <div class="flex items-center justify-between h-full px-4 md:px-6">
+    <!-- Left: Menu Toggle + Logo -->
+    <div class="flex items-center gap-3">
+      <button 
+        (click)="toggleSidebar()"
+        class="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        aria-label="Toggle menu">
+        <i class="pi" [ngClass]="sidebarOpen ? 'pi-times text-xl text-gray-800' : 'pi-bars text-xl text-gray-800'"></i>
+      </button>
+      <div class="flex items-center gap-2">
+        <i class="pi pi-box text-2xl text-blue-600"></i>
+        <h1 class="text-xl font-bold text-gray-800">Order Processing</h1>
+      </div>
+    </div>
+    
+    <!-- Right: Profile & Settings (Future expansion area) -->
+    <div class="flex items-center gap-4">
+      <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Notifications">
+        <i class="pi pi-bell text-lg text-gray-600"></i>
+      </button>
+      <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Profile">
+        <i class="pi pi-user text-lg text-gray-600"></i>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- Sidebar Overlay (Mobile) -->
+@if(sidebarOpen && !isDesktop) {
+    <div (click)="closeSidebar()"
+        class="fixed inset-0 bg-black bg-opacity-50 z-20"
+        aria-hidden="true"></div>
+}
+
+
+<!-- Floating Left Sidebar -->
+<aside 
+  class="fixed left-4 top-20 h-[calc(100vh-7rem)] w-64 bg-gray-700 text-white rounded-lg shadow-2xl z-50 transform transition-transform duration-300 ease-in-out"
+  [ngClass]="sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+1rem)]'">
+  <!-- Navigation Items -->
+  <nav class="p-4 space-y-2 overflow-y-auto h-full">
+    <a 
+      [routerLink]="['']"
+      class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors group">
+      <i class="pi pi-chart-bar text-lg group-hover:text-blue-400 transition-colors"></i>
+      <span class="font-medium">Dashboard</span>
+    </a>
+    
+    <a 
+      [routerLink]="['','orders']"
+      class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors group">
+      <i class="pi pi-shopping-cart text-lg group-hover:text-blue-400 transition-colors"></i>
+      <span class="font-medium">Orders</span>
+    </a>
+    
+    <a 
+      [routerLink]="['','sales']"
+      class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors group">
+      <i class="pi pi-credit-card text-lg group-hover:text-blue-400 transition-colors"></i>
+      <span class="font-medium">Sales</span>
+    </a>
+    
+    <a 
+      [routerLink]="['','items']"
+      class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors group">
+      <i class="pi pi-list text-lg group-hover:text-blue-400 transition-colors"></i>
+      <span class="font-medium">Items</span>
+    </a>
+    
+    <hr class="my-4 border-gray-700">
+    
+    <a 
+      [routerLink]="['','settings']"
+      class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors group">
+      <i class="pi pi-cog text-lg group-hover:text-blue-400 transition-colors"></i>
+      <span class="font-medium">Settings</span>
+    </a>
+  </nav>
+</aside>
