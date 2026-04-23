@@ -83,8 +83,17 @@ If a requested UI depends on backend behavior that does not exist yet, call that
 - Focus on pages and components for an order-processing workflow: dashboard, inventory, sales, order status, and related detail views.
 - Build interfaces that make operational state clear: statuses, counts, low stock, processing progress, and action availability.
 - Use PrimeNG where it helps, but do not force it into every component.
+- For PrimeNG visual theming requests, prefer PrimeNG's theming engine and token/preset overrides over component-scoped CSS overrides.
 - Keep components focused. Split out reusable cards, tables, filters, forms, and status badges when a page starts to grow.
 - Make layouts responsive by default.
+
+## PrimeNG Theming Rules
+
+- When asked to change PrimeNG styling globally, implement it through a theme preset override.
+- Prefer creating or updating a custom preset with `definePreset(...)` and wiring it through `providePrimeNG({ theme: { preset: ... } })` in `app/src/app/app.config.ts`.
+- For tokenized values, use PrimeUIX/PrimeNG design tokens first (for example component token paths under `components.<name>`), rather than hardcoded per-component selectors.
+- Use local component CSS overrides only when the request is explicitly scoped to one component or when no theme token/preset path exists.
+- Keep theming changes generic and reusable so future PrimeNG components inherit the same behavior without extra per-page CSS.
 
 ## Working Rules
 

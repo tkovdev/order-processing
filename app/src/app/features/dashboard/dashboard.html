@@ -6,30 +6,35 @@
 		</div>
 
 		<div class="header-actions">
-			@if (lastUpdated) {
-				<span class="last-updated">Updated {{ lastUpdated | date: 'shortTime' }}</span>
+			@if (lastUpdated()) {
+				<span class="last-updated">Updated {{ lastUpdated() | date: 'shortTime' }}</span>
 			}
-			<button type="button" class="refresh-btn" (click)="refreshNow()" [disabled]="loading">
+			<button type="button" class="refresh-btn" (click)="refreshNow()" [disabled]="loading()">
 				Refresh
 			</button>
 		</div>
 	</header>
 
-	@if (errorMessage) {
+	@if (errorMessage()) {
 		<div class="status-block error">
 			<i class="pi pi-exclamation-triangle"></i>
-			<span>{{ errorMessage }}</span>
+			<span>{{ errorMessage() }}</span>
 		</div>
 	}
 
-	@if (loading) {
+	@if (loading()) {
 		<div class="status-block loading">
-			<i class="pi pi-spin pi-spinner"></i>
+			<p-progressspinner
+				class="dashboard-spinner"
+				strokeWidth="5"
+				animationDuration="0.9s"
+				ariaLabel="Loading dashboard data"
+			></p-progressspinner>
 			<span>Loading dashboard data...</span>
 		</div>
 	}
 
-	@if (!loading) {
+	@if (!loading()) {
 		<div class="kpi-grid">
 			<article class="kpi-card">
 				<div class="kpi-label">Inventory Quantity</div>

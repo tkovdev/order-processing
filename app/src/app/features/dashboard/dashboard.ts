@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { Subject, interval, of } from 'rxjs';
 import { catchError, startWith, switchMap, takeUntil } from 'rxjs/operators';
 import { DashboardApiService } from './dashboard-api.service';
@@ -85,7 +86,7 @@ interface DashboardViewModel {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule],
+  imports: [CommonModule, ProgressSpinnerModule],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
@@ -95,9 +96,9 @@ export class Dashboard implements OnInit, OnDestroy {
 
   private readonly refreshMs = 30_000;
 
-  loading = true;
-  errorMessage = '';
-  lastUpdated: Date | null = null;
+  loading = signal(true);
+  errorMessage = signal('');
+  lastUpdated = signal<Date | null>(null);
 
   model = signal<DashboardViewModel>({
     totalInventoryQuantity: 0,
@@ -132,13 +133,13 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   private fetchDashboardData() {
-    this.loading = true;
-    this.errorMessage = '';
+    this.loading.set(true);
+    this.errorMessage.set('');
 
     return this.dashboardApi.fetchDashboardData().pipe(
       catchError((error: unknown) => {
-        this.loading = false;
-        this.errorMessage = 'Unable to load dashboard data from the API.';
+        this.loading.set(false);
+        this.errorMessage.set('Unable to load dashboard data from the API.');
         return of({
           itemsResponse: { items: [] },
           salesResponse: { sales: [] },
@@ -150,8 +151,8 @@ export class Dashboard implements OnInit, OnDestroy {
         const sales = this.normalizeSales(salesResponse.sales ?? []);
 
         this.model.set(this.buildViewModel(items, sales));
-        this.lastUpdated = new Date();
-        this.loading = false;
+        this.lastUpdated.set(new Date());
+        this.loading.set(false);
 
         return of(null);
       }),

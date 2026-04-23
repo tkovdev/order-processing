@@ -69,6 +69,20 @@
 	color: #1f4b77;
 }
 
+.dashboard-spinner {
+	display: inline-flex;
+	flex: 0 0 auto;
+	height: 0.9rem;
+	vertical-align: middle;
+	width: 0.9rem;
+	margin: 0;
+}
+
+.dashboard-spinner svg {
+	height: 100%;
+	width: 100%;
+}
+
 .kpi-grid {
 	display: grid;
 	gap: 0.8rem;
