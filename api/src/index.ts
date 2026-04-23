@@ -3,9 +3,23 @@ import routes from './routes';
 import { connectToDatabase } from './db/connection';
 import { connectProducer, disconnectProducer } from './kafka/producer';
 import { initializeTopics } from './kafka/topics';
+import cors from 'cors';
 
 const app = express();
 const PORT = process.env.PORT || 3300;
+
+const corsOrigins = (process.env.CORS_ORIGINS ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: corsOrigins,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 
