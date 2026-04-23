@@ -25,6 +25,7 @@ The UI work should reflect that this is an operational system, not just a generi
 ## Angular Standards
 
 - Use Angular standalone components only.
+- Prefer Angular signals for component state, especially API-backed view state, over mutable class fields when practical.
 - Keep the existing file pattern for each page or component: `.ts`, `.html`, `.css`, and `.spec.ts` together in one folder.
 - Put route-level pages in `app/src/app/features/`.
 - Put reusable UI in `app/src/app/shared/`.
@@ -69,7 +70,9 @@ If a requested UI depends on backend behavior that does not exist yet, call that
 
 ## API Integration Rules
 
-- Encapsulate API calls in Angular services instead of calling `HttpClient` directly from templates or spreading requests across many components.
+- Every component or page that needs API data must consume an Angular service.
+- Do not call `HttpClient` directly inside components for API access.
+- Keep API logic in services so multiple components can share the same data-access layer.
 - Use typed request and response shapes.
 - Keep API base URLs centralized instead of hard-coding them in many files.
 - Handle loading, empty, and error states in every data-driven page.
@@ -94,6 +97,7 @@ If a requested UI depends on backend behavior that does not exist yet, call that
 ## Preferred Copilot Behavior
 
 - Assume I want implementation, not just suggestions, unless I ask for design discussion only.
+- When I ask to add or update instructions, keep them generic and reusable across the project rather than tied to one feature.
 - When a frontend task depends on backend behavior, inspect the backend first and align the Angular code to what actually exists.
 - If the backend and requested UI do not match, explain the mismatch clearly and then implement the best frontend-safe version.
 - Optimize for usable pages and components rather than placeholder scaffolding.

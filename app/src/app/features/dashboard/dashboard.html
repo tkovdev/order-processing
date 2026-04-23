@@ -1,1 +1,186 @@
-<p>dashboard works!</p>
+<section class="dashboard-shell">
+	<header class="dashboard-header">
+		<div>
+			<h1>Operations Dashboard</h1>
+			<p>Inventory and sales pulse from live API data.</p>
+		</div>
+
+		<div class="header-actions">
+			@if (lastUpdated) {
+				<span class="last-updated">Updated {{ lastUpdated | date: 'shortTime' }}</span>
+			}
+			<button type="button" class="refresh-btn" (click)="refreshNow()" [disabled]="loading">
+				Refresh
+			</button>
+		</div>
+	</header>
+
+	@if (errorMessage) {
+		<div class="status-block error">
+			<i class="pi pi-exclamation-triangle"></i>
+			<span>{{ errorMessage }}</span>
+		</div>
+	}
+
+	@if (loading) {
+		<div class="status-block loading">
+			<i class="pi pi-spin pi-spinner"></i>
+			<span>Loading dashboard data...</span>
+		</div>
+	}
+
+	@if (!loading) {
+		<div class="kpi-grid">
+			<article class="kpi-card">
+				<div class="kpi-label">Inventory Quantity</div>
+				<div class="kpi-value">{{ model().totalInventoryQuantity | number }}</div>
+				<div class="kpi-footnote">Units in stock</div>
+			</article>
+
+			<article class="kpi-card">
+				<div class="kpi-label">Inventory Value</div>
+				<div class="kpi-value">{{ model().totalInventoryValue | currency }}</div>
+				<div class="kpi-footnote">Price x quantity</div>
+			</article>
+
+			<article class="kpi-card">
+				<div class="kpi-label">Total Sales</div>
+				<div class="kpi-value">{{ model().totalSales | number }}</div>
+				<div class="kpi-footnote">All recorded sales</div>
+			</article>
+
+			<article class="kpi-card">
+				<div class="kpi-label">Submitted Sales</div>
+				<div class="kpi-value">{{ model().submittedSales | number }}</div>
+				<div class="kpi-footnote">Awaiting completion</div>
+			</article>
+
+			<article class="kpi-card">
+				<div class="kpi-label">Completed Sales</div>
+				<div class="kpi-value">{{ model().completedSales | number }}</div>
+				<div class="kpi-footnote">Done and closed</div>
+			</article>
+		</div>
+
+		<div class="dashboard-grid">
+			<article class="panel wide">
+				<h2>Stock by Location</h2>
+				@if (model().inventoryByLocation.length) {
+					<table class="data-table">
+						<thead>
+							<tr>
+								<th>Location</th>
+								<th>Items</th>
+								<th>Units</th>
+								<th>Value</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr *ngFor="let row of model().inventoryByLocation">
+								<td>{{ row.location }}</td>
+								<td>{{ row.itemCount | number }}</td>
+								<td>{{ row.quantity | number }}</td>
+								<td>{{ row.value | currency }}</td>
+							</tr>
+						</tbody>
+					</table>
+				} @else {
+					<p class="empty-state">No inventory data available.</p>
+				}
+			</article>
+
+			<article class="panel">
+				<h2>Top Value Items</h2>
+				@if (model().topValueItems.length) {
+					<ul class="rank-list">
+						<li *ngFor="let item of model().topValueItems">
+							<div>
+								<strong>{{ item.name }}</strong>
+								<span>{{ item.location }}</span>
+							</div>
+							<div class="right-align">
+								<span>{{ item.quantity | number }} units</span>
+								<strong>{{ item.value | currency }}</strong>
+							</div>
+						</li>
+					</ul>
+				} @else {
+					<p class="empty-state">No items to rank yet.</p>
+				}
+			</article>
+
+			<article class="panel wide">
+				<h2>Recent Sales</h2>
+				@if (model().recentSales.length) {
+					<table class="data-table">
+						<thead>
+							<tr>
+								<th>Customer</th>
+								<th>Status</th>
+								<th>Lines</th>
+								<th>Units</th>
+								<th>Value</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr *ngFor="let sale of model().recentSales">
+								<td>
+									<div>{{ sale.customerName }}</div>
+									<small>{{ sale.customerEmail }}</small>
+								</td>
+								<td>
+									<span class="status-badge" [class.done]="sale.status === 'completed'">{{ sale.status }}</span>
+								</td>
+								<td>{{ sale.lineCount | number }}</td>
+								<td>{{ sale.totalUnits | number }}</td>
+								<td>{{ sale.totalValue | currency }}</td>
+							</tr>
+						</tbody>
+					</table>
+				} @else {
+					<p class="empty-state">No sales records available.</p>
+				}
+			</article>
+
+			<article class="panel">
+				<h2>Customer Summary</h2>
+				@if (model().customerSummary.length) {
+					<ul class="rank-list">
+						<li *ngFor="let customer of model().customerSummary">
+							<div>
+								<strong>{{ customer.customerName }}</strong>
+								<span>{{ customer.customerEmail }}</span>
+							</div>
+							<div class="right-align">
+								<span>{{ customer.salesCount | number }} sales</span>
+								<strong>{{ customer.totalValue | currency }}</strong>
+							</div>
+						</li>
+					</ul>
+				} @else {
+					<p class="empty-state">No customer data yet.</p>
+				}
+			</article>
+
+			<article class="panel">
+				<h2>Inventory Value at Risk</h2>
+				@if (model().atRiskItems.length) {
+					<ul class="risk-list">
+						<li *ngFor="let risk of model().atRiskItems">
+							<div>
+								<strong>{{ risk.name }}</strong>
+								<span>{{ risk.location }}</span>
+							</div>
+							<div class="right-align">
+								<span>{{ risk.quantity | number }} units left</span>
+								<strong>{{ risk.atRiskValue | currency }}</strong>
+							</div>
+						</li>
+					</ul>
+				} @else {
+					<p class="empty-state">No at-risk inventory currently detected.</p>
+				}
+			</article>
+		</div>
+	}
+</section>
