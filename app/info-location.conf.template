@@ -1,0 +1,5 @@
+location = /.info {
+    default_type application/json;
+    add_header Cache-Control "no-store" always;
+    return 200 '{"status":"ok","service":"${APP_SERVICE_NAME}","environment":"${APP_ENVIRONMENT}","apiBaseUrl":"${APP_API_BASE_URL}"}';
+}

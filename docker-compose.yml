@@ -5,8 +5,21 @@ services:
       dockerfile: Dockerfile
     ports: 
       - "8080:8080"
+    environment:
+      - APP_SERVICE_NAME=order-processing-app
+      - APP_ENVIRONMENT=development
+      - APP_API_BASE_URL=http://localhost:3300
+      - NGINX_ENVSUBST_FILTER=APP_
     networks:
       - app-network
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "curl", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
 
   api:
     build:

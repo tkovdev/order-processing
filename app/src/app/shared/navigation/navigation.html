@@ -17,6 +17,9 @@
     
     <!-- Right: Profile & Settings (Future expansion area) -->
     <div class="flex items-center gap-4">
+      @if (environment.environment !== 'production') {
+        <p-chip [label]="environment.environment"  />
+      }
       <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Notifications">
         <i class="pi pi-bell text-lg text-gray-600"></i>
       </button>
