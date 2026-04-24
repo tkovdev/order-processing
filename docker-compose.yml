@@ -32,6 +32,7 @@ services:
       - MONGODB_URI=mongodb://mongodb:27017/order-processing
       - KAFKA_BROKER=kafka:29092
       - CORS_ORIGINS=http://localhost:4200,http://localhost:8080
+      - HOSTED=true
     networks:
       - app-network
     depends_on:

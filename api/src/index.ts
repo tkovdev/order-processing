@@ -6,7 +6,8 @@ import { initializeTopics } from './kafka/topics';
 import cors from 'cors';
 
 const app = express();
-const PORT = process.env.PORT || 3300;
+const PORT = process.env.PORT || 4300;
+const hosted = process.env.HOSTED || false;
 
 const corsOrigins = (process.env.CORS_ORIGINS ?? '')
   .split(',')
@@ -37,16 +38,18 @@ async function start(): Promise<void> {
     process.exit(1);
   });
 
-  await initializeTopics().catch(err => {
-    console.error('Failed to initialize Kafka topics', err);
-    process.exit(1);
-  });
-
-  await connectProducer().catch(err => {
-    console.error('Failed to connect Kafka producer', err);
-    process.exit(1);
-  });
-
+  if (hosted) {
+    await initializeTopics().catch(err => {
+      console.error('Failed to initialize Kafka topics', err);
+      process.exit(1);
+    });
+    
+    await connectProducer().catch(err => {
+      console.error('Failed to connect Kafka producer', err);
+      process.exit(1);
+    });
+  }
+  
   app.listen(PORT, () => {
     console.log(`API running on port ${PORT}`);
   });
