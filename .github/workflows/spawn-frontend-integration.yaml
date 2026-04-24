@@ -130,10 +130,10 @@ jobs:
       - name: Add FE issue to project and set Todo
         if: >
           steps.create_fe_issue.outputs.created_issue_node_id != '' &&
-          secrets.FE_AUTOMATION_TOKEN != '' &&
-          secrets.FE_PROJECT_ID != '' &&
-          secrets.FE_STATUS_FIELD_ID != '' &&
-          secrets.FE_TODO_OPTION_ID != ''
+          env.FE_AUTOMATION_TOKEN != '' &&
+          env.FE_PROJECT_ID != '' &&
+          env.FE_STATUS_FIELD_ID != '' &&
+          env.FE_TODO_OPTION_ID != ''
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.FE_AUTOMATION_TOKEN }}
@@ -175,6 +175,7 @@ jobs:
 
             core.info("Added FE issue to project and set Status=Todo.");
         env:
+          FE_AUTOMATION_TOKEN: ${{ secrets.FE_AUTOMATION_TOKEN }}
           FE_PROJECT_ID: ${{ secrets.FE_PROJECT_ID }}
           FE_STATUS_FIELD_ID: ${{ secrets.FE_STATUS_FIELD_ID }}
           FE_TODO_OPTION_ID: ${{ secrets.FE_TODO_OPTION_ID }}
