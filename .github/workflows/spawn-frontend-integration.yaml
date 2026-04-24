@@ -3,7 +3,7 @@ name: Spawn Frontend Integration Issue
 
 on:
   issues:
-    types: [closed]
+    types: [closed, labeled]
 
 permissions:
   issues: write
@@ -13,9 +13,10 @@ jobs:
   spawn-frontend-issue:
     runs-on: ubuntu-latest
 
-    # Only run when closed issue has required labels:
+    # Run only for closed issues that have required labels:
     # back-end + api-ready
     if: >
+      github.event.issue.state == 'closed' &&
       contains(github.event.issue.labels.*.name, 'back-end') &&
       contains(github.event.issue.labels.*.name, 'api-ready')
 
