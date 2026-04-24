@@ -11,6 +11,13 @@ export interface OperationsSummary {
   completedSales: number;
 }
 
+export interface LocationInventorySummary {
+  location: string;
+  itemCount: number;
+  quantity: number;
+  value: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -24,6 +31,9 @@ export class DashboardApiService {
       salesResponse: this.http.get<{ sales: unknown[] }>(`${this.apiBaseUrl}/sales`),
       operationsSummary: this.http.get<OperationsSummary>(
         `${this.apiBaseUrl}/metrics/operations/summary`,
+      ),
+      locationSummary: this.http.get<LocationInventorySummary[]>(
+        `${this.apiBaseUrl}/inventory/locations/summary`,
       ),
     });
   }
