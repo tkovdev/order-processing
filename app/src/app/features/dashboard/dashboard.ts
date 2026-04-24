@@ -3,7 +3,7 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { Subject, interval, of } from 'rxjs';
 import { catchError, startWith, switchMap, takeUntil } from 'rxjs/operators';
-import { DashboardApiService } from './dashboard-api.service';
+import { DashboardApiService, OperationsSummary } from './dashboard-api.service';
 
 type SaleStatus = 'submitted' | 'completed' | string;
 
@@ -143,14 +143,21 @@ export class Dashboard implements OnInit, OnDestroy {
         return of({
           itemsResponse: { items: [] },
           salesResponse: { sales: [] },
+          operationsSummary: {
+            totalInventoryQuantity: 0,
+            totalInventoryValue: 0,
+            totalSales: 0,
+            submittedSales: 0,
+            completedSales: 0,
+          } as OperationsSummary,
           error,
         });
       }),
-      switchMap(({ itemsResponse, salesResponse }) => {
+      switchMap(({ itemsResponse, salesResponse, operationsSummary }) => {
         const items = this.normalizeItems(itemsResponse.items ?? []);
         const sales = this.normalizeSales(salesResponse.sales ?? []);
 
-        this.model.set(this.buildViewModel(items, sales));
+        this.model.set(this.buildViewModel(items, sales, operationsSummary));
         this.lastUpdated.set(new Date());
         this.loading.set(false);
 
@@ -159,15 +166,16 @@ export class Dashboard implements OnInit, OnDestroy {
     );
   }
 
-  private buildViewModel(items: Item[], sales: Sale[]): DashboardViewModel {
+  private buildViewModel(items: Item[], sales: Sale[], summary: OperationsSummary): DashboardViewModel {
     const priceByItemId = new Map<string, number>(items.map((item) => [item.id, item.price]));
 
-    const totalInventoryQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
-    const totalInventoryValue = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-    const totalSales = sales.length;
-    const submittedSales = sales.filter((sale) => sale.status === 'submitted').length;
-    const completedSales = sales.filter((sale) => sale.status === 'completed').length;
+    const {
+      totalInventoryQuantity,
+      totalInventoryValue,
+      totalSales,
+      submittedSales,
+      completedSales,
+    } = summary;
 
     const locationMap = new Map<string, InventoryByLocation>();
     for (const item of items) {

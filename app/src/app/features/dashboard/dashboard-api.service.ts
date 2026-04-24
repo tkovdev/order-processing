@@ -3,6 +3,14 @@ import { Injectable, inject } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+export interface OperationsSummary {
+  totalInventoryQuantity: number;
+  totalInventoryValue: number;
+  totalSales: number;
+  submittedSales: number;
+  completedSales: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -14,6 +22,9 @@ export class DashboardApiService {
     return forkJoin({
       itemsResponse: this.http.get<{ items: unknown[] }>(`${this.apiBaseUrl}/items`),
       salesResponse: this.http.get<{ sales: unknown[] }>(`${this.apiBaseUrl}/sales`),
+      operationsSummary: this.http.get<OperationsSummary>(
+        `${this.apiBaseUrl}/metrics/operations/summary`,
+      ),
     });
   }
 }
