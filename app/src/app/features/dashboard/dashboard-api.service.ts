@@ -27,6 +27,17 @@ export interface TopValueItem {
   value: number;
 }
 
+export interface RecentSale {
+  saleId: string;
+  createdAt: string;
+  status: string;
+  customerName: string;
+  customerEmail: string;
+  lineCount: number;
+  totalUnits: number;
+  totalValue: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -47,6 +58,7 @@ export class DashboardApiService {
       topValueItems: this.http.get<TopValueItem[]>(
         `${this.apiBaseUrl}/inventory/items/top-value?limit=5`,
       ),
+      recentSales: this.http.get<RecentSale[]>(`${this.apiBaseUrl}/sales/recent?limit=10`),
     });
   }
 }
