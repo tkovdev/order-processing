@@ -8,8 +8,9 @@ import cors from 'cors';
 const app = express();
 const PORT = process.env.PORT || 4300;
 const hosted = process.env.HOSTED || false;
+const origins = process.env.CORS_ORIGINS || 'http://localhost:4200';
 
-const corsOrigins = (process.env.CORS_ORIGINS ?? '')
+const corsOrigins = origins
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
