@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Project Automation Workflow
+    url: https://github.com/tkovdev/order-processing/blob/main/README.md
+    about: Read the backend-to-frontend issue automation flow before opening issues.

@@ -1,0 +1,180 @@
+# .github/workflows/spawn-frontend-integration.yml
+name: Spawn Frontend Integration Issue
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  spawn-frontend-issue:
+    runs-on: ubuntu-latest
+
+    # Only run when closed issue has required labels:
+    # back-end + api-ready
+    if: >
+      contains(github.event.issue.labels.*.name, 'back-end') &&
+      contains(github.event.issue.labels.*.name, 'api-ready')
+
+    steps:
+      - name: Create frontend integration issue (generic dedupe by source issue)
+        id: create_fe_issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const closed = context.payload.issue;
+            const title = closed.title || "";
+            const body = closed.body || "";
+            const repo = context.repo.repo;
+            const owner = context.repo.owner;
+
+            const feTitle = `FE Integration: #${closed.number} ${title}`;
+
+            // Dedupe: skip if a FE integration issue already references this backend issue.
+            const existing = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "all",
+              per_page: 100
+            });
+
+            const sourceMarker = `- Backend issue: #${closed.number}`;
+            const duplicate = existing.find(i => {
+              const t = (i.title || "").toLowerCase();
+              const b = i.body || "";
+              return t.startsWith("fe integration:") && b.includes(sourceMarker);
+            });
+            if (duplicate) {
+              core.info(`Duplicate exists: #${duplicate.number}. Skipping create.`);
+              core.setOutput("created_issue_number", String(duplicate.number));
+              core.setOutput("created_issue_node_id", duplicate.node_id);
+              return;
+            }
+
+            // Best-effort interface extraction from backend issue body
+            let interfaceTarget = "Not specified";
+            const endpointMatch = body.match(/##\s*Endpoint\s*\n+([^\n]+)/i);
+            if (endpointMatch) interfaceTarget = endpointMatch[1].trim();
+
+            const contractMatch = body.match(/##\s*Response Contract\s*\n+([\s\S]*?)(\n##\s|$)/i);
+            const contractSnippet = contractMatch
+              ? contractMatch[1].trim().slice(0, 1200)
+              : "Not provided in source issue.";
+
+            const feBody = [
+              "## Source",
+              `- Backend issue: #${closed.number}`,
+              `- Backend issue title: ${title}`,
+              "- Backend PR: Not specified",
+              "- Contract version or date: Not specified",
+              "",
+              "## Interface Surface",
+              `- Target: ${interfaceTarget}`,
+              "- Request shape updates: Not specified",
+              "- Response shape updates: See contract notes",
+              "",
+              "## Backend Contract Notes",
+              contractSnippet,
+              "",
+              "## Execution Brief",
+              "- [ ] Add/extend frontend API service method",
+              "- [ ] Update request/response types and data mapping",
+              "- [ ] Replace obsolete client-side derivations with backend-provided fields where applicable",
+              "- [ ] Update UI state/loading/error handling",
+              "- [ ] Add or update tests",
+              "- [ ] Verify rendered behavior against backend contract",
+              "",
+              "## Frontend Acceptance Criteria",
+              "- [ ] Frontend consumes the new backend contract correctly",
+              "- [ ] Existing behavior remains correct for impacted screens",
+              "- [ ] No regression in loading/error/empty states",
+              "- [ ] Tests are updated and passing",
+              "",
+              "## Out Of Scope",
+              "",
+              "## Validation Notes",
+              "",
+              "## Notes",
+              "- This issue was auto-generated when a back-end + api-ready issue was closed."
+            ].join("\n");
+
+            const labels = ["frontend", "integration"];
+            const assignees = [];
+            const configuredAssignee = process.env.FE_ASSIGNEE?.trim();
+            if (configuredAssignee) assignees.push(configuredAssignee);
+
+            const created = await github.rest.issues.create({
+              owner,
+              repo,
+              title: feTitle,
+              body: feBody,
+              labels,
+              assignees
+            });
+
+            core.info(`Created FE integration issue #${created.data.number}`);
+            core.setOutput("created_issue_number", String(created.data.number));
+            core.setOutput("created_issue_node_id", created.data.node_id);
+        env:
+          FE_ASSIGNEE: ${{ vars.FE_ASSIGNEE }}
+
+      # Optional: add created issue to Project v2 + set Status=Todo
+      # Requires secret FE_AUTOMATION_TOKEN with scopes: repo, project
+      # Also requires these secrets:
+      # - FE_PROJECT_ID
+      # - FE_STATUS_FIELD_ID
+      # - FE_TODO_OPTION_ID
+      - name: Add FE issue to project and set Todo
+        if: >
+          steps.create_fe_issue.outputs.created_issue_node_id != '' &&
+          secrets.FE_AUTOMATION_TOKEN != '' &&
+          secrets.FE_PROJECT_ID != '' &&
+          secrets.FE_STATUS_FIELD_ID != '' &&
+          secrets.FE_TODO_OPTION_ID != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.FE_AUTOMATION_TOKEN }}
+          script: |
+            const contentId = "${{ steps.create_fe_issue.outputs.created_issue_node_id }}";
+            const projectId = process.env.FE_PROJECT_ID;
+            const statusFieldId = process.env.FE_STATUS_FIELD_ID;
+            const todoOptionId = process.env.FE_TODO_OPTION_ID;
+
+            // Add issue to project
+            const addResult = await github.graphql(`
+              mutation($projectId: ID!, $contentId: ID!) {
+                addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+                  item { id }
+                }
+              }
+            `, { projectId, contentId });
+
+            const itemId = addResult.addProjectV2ItemById.item.id;
+
+            // Set Status field = Todo
+            await github.graphql(`
+              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $projectId
+                  itemId: $itemId
+                  fieldId: $fieldId
+                  value: { singleSelectOptionId: $optionId }
+                }) {
+                  projectV2Item { id }
+                }
+              }
+            `, {
+              projectId,
+              itemId,
+              fieldId: statusFieldId,
+              optionId: todoOptionId
+            });
+
+            core.info("Added FE issue to project and set Status=Todo.");
+        env:
+          FE_PROJECT_ID: ${{ secrets.FE_PROJECT_ID }}
+          FE_STATUS_FIELD_ID: ${{ secrets.FE_STATUS_FIELD_ID }}
+          FE_TODO_OPTION_ID: ${{ secrets.FE_TODO_OPTION_ID }}
