@@ -3,7 +3,7 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { Subject, interval, of } from 'rxjs';
 import { catchError, startWith, switchMap, takeUntil } from 'rxjs/operators';
-import { DashboardApiService, OperationsSummary } from './dashboard-api.service';
+import { DashboardApiService, LocationInventorySummary, OperationsSummary } from './dashboard-api.service';
 
 type SaleStatus = 'submitted' | 'completed' | string;
 
@@ -150,14 +150,15 @@ export class Dashboard implements OnInit, OnDestroy {
             submittedSales: 0,
             completedSales: 0,
           } as OperationsSummary,
+          locationSummary: [] as LocationInventorySummary[],
           error,
         });
       }),
-      switchMap(({ itemsResponse, salesResponse, operationsSummary }) => {
+      switchMap(({ itemsResponse, salesResponse, operationsSummary, locationSummary }) => {
         const items = this.normalizeItems(itemsResponse.items ?? []);
         const sales = this.normalizeSales(salesResponse.sales ?? []);
 
-        this.model.set(this.buildViewModel(items, sales, operationsSummary));
+        this.model.set(this.buildViewModel(items, sales, operationsSummary, locationSummary));
         this.lastUpdated.set(new Date());
         this.loading.set(false);
 
@@ -166,7 +167,7 @@ export class Dashboard implements OnInit, OnDestroy {
     );
   }
 
-  private buildViewModel(items: Item[], sales: Sale[], summary: OperationsSummary): DashboardViewModel {
+  private buildViewModel(items: Item[], sales: Sale[], summary: OperationsSummary, locationSummary: LocationInventorySummary[]): DashboardViewModel {
     const priceByItemId = new Map<string, number>(items.map((item) => [item.id, item.price]));
 
     const {
@@ -177,27 +178,7 @@ export class Dashboard implements OnInit, OnDestroy {
       completedSales,
     } = summary;
 
-    const locationMap = new Map<string, InventoryByLocation>();
-    for (const item of items) {
-      const key = item.location || 'Unassigned';
-      const existing = locationMap.get(key);
-      if (existing) {
-        existing.itemCount += 1;
-        existing.quantity += item.quantity;
-        existing.value += item.quantity * item.price;
-      } else {
-        locationMap.set(key, {
-          location: key,
-          itemCount: 1,
-          quantity: item.quantity,
-          value: item.quantity * item.price,
-        });
-      }
-    }
-
-    const inventoryByLocation = Array.from(locationMap.values()).sort(
-      (a, b) => b.value - a.value,
-    );
+    const inventoryByLocation = [...locationSummary].sort((a, b) => b.value - a.value);
 
     const topValueItems = items
       .map((item) => ({
