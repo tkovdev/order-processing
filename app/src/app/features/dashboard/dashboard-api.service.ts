@@ -18,6 +18,15 @@ export interface LocationInventorySummary {
   value: number;
 }
 
+export interface TopValueItem {
+  itemId: string;
+  name: string;
+  location: string;
+  quantity: number;
+  unitPrice: number;
+  value: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -34,6 +43,9 @@ export class DashboardApiService {
       ),
       locationSummary: this.http.get<LocationInventorySummary[]>(
         `${this.apiBaseUrl}/inventory/locations/summary`,
+      ),
+      topValueItems: this.http.get<TopValueItem[]>(
+        `${this.apiBaseUrl}/inventory/items/top-value?limit=5`,
       ),
     });
   }

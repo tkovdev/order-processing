@@ -3,7 +3,7 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { Subject, interval, of } from 'rxjs';
 import { catchError, startWith, switchMap, takeUntil } from 'rxjs/operators';
-import { DashboardApiService, LocationInventorySummary, OperationsSummary } from './dashboard-api.service';
+import { DashboardApiService, LocationInventorySummary, OperationsSummary, TopValueItem } from './dashboard-api.service';
 
 type SaleStatus = 'submitted' | 'completed' | string;
 
@@ -40,9 +40,11 @@ interface InventoryByLocation {
 }
 
 interface TopItem {
+  itemId: string;
   name: string;
   location: string;
   quantity: number;
+  unitPrice: number;
   value: number;
 }
 
@@ -151,14 +153,15 @@ export class Dashboard implements OnInit, OnDestroy {
             completedSales: 0,
           } as OperationsSummary,
           locationSummary: [] as LocationInventorySummary[],
+          topValueItems: [] as TopValueItem[],
           error,
         });
       }),
-      switchMap(({ itemsResponse, salesResponse, operationsSummary, locationSummary }) => {
+      switchMap(({ itemsResponse, salesResponse, operationsSummary, locationSummary, topValueItems }) => {
         const items = this.normalizeItems(itemsResponse.items ?? []);
         const sales = this.normalizeSales(salesResponse.sales ?? []);
 
-        this.model.set(this.buildViewModel(items, sales, operationsSummary, locationSummary));
+        this.model.set(this.buildViewModel(items, sales, operationsSummary, locationSummary, topValueItems));
         this.lastUpdated.set(new Date());
         this.loading.set(false);
 
@@ -167,7 +170,7 @@ export class Dashboard implements OnInit, OnDestroy {
     );
   }
 
-  private buildViewModel(items: Item[], sales: Sale[], summary: OperationsSummary, locationSummary: LocationInventorySummary[]): DashboardViewModel {
+  private buildViewModel(items: Item[], sales: Sale[], summary: OperationsSummary, locationSummary: LocationInventorySummary[], topValueItems: TopValueItem[]): DashboardViewModel {
     const priceByItemId = new Map<string, number>(items.map((item) => [item.id, item.price]));
 
     const {
@@ -180,15 +183,14 @@ export class Dashboard implements OnInit, OnDestroy {
 
     const inventoryByLocation = [...locationSummary].sort((a, b) => b.value - a.value);
 
-    const topValueItems = items
-      .map((item) => ({
-        name: item.name,
-        location: item.location,
-        quantity: item.quantity,
-        value: item.price * item.quantity,
-      }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
+    const topItems: TopItem[] = topValueItems.map((item) => ({
+      itemId: item.itemId,
+      name: item.name,
+      location: item.location,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      value: item.value,
+    }));
 
     const recentSales = [...sales]
       .reverse()
@@ -258,7 +260,7 @@ export class Dashboard implements OnInit, OnDestroy {
       submittedSales,
       completedSales,
       inventoryByLocation,
-      topValueItems,
+      topValueItems: topItems,
       recentSales,
       customerSummary,
       atRiskItems,
