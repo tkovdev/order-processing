@@ -73,8 +73,16 @@ jobs:
             }
 
             for (const issue of linkedIssues) {
-              const hasLabel = issue.labels.nodes.some((label) => label.name === "api-ready");
-              if (hasLabel) {
+              const labels = issue.labels.nodes.map((label) => label.name);
+              const isBackendIssue = labels.includes("back-end");
+              const hasApiReadyLabel = labels.includes("api-ready");
+
+              if (!isBackendIssue) {
+                core.info(`Skipping issue #${issue.number}: not labeled back-end.`);
+                continue;
+              }
+
+              if (hasApiReadyLabel) {
                 core.info(`Issue #${issue.number} already has api-ready label.`);
                 continue;
               }
