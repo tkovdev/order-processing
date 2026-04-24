@@ -31,6 +31,37 @@ jobs:
             const body = closed.body || "";
             const repo = context.repo.repo;
             const owner = context.repo.owner;
+            const issueNumber = closed.number;
+
+            let backendPrLine = "Not specified";
+            try {
+              const prLookup = await github.graphql(`
+                query($owner: String!, $repo: String!, $issueNumber: Int!) {
+                  repository(owner: $owner, name: $repo) {
+                    issue(number: $issueNumber) {
+                      closedByPullRequestsReferences(first: 10) {
+                        nodes {
+                          number
+                          url
+                        }
+                      }
+                    }
+                  }
+                }
+              `, {
+                owner,
+                repo,
+                issueNumber,
+              });
+
+              const prs = prLookup.repository.issue.closedByPullRequestsReferences.nodes || [];
+              if (prs.length > 0) {
+                const pr = prs[0];
+                backendPrLine = `#${pr.number} (${pr.url})`;
+              }
+            } catch (error) {
+              core.warning(`Could not resolve closing PR for issue #${issueNumber}: ${error.message}`);
+            }
 
             const feTitle = `FE Integration: #${closed.number} ${title}`;
 
@@ -69,7 +100,7 @@ jobs:
               "## Source",
               `- Backend issue: #${closed.number}`,
               `- Backend issue title: ${title}`,
-              "- Backend PR: Not specified",
+              `- Backend PR: ${backendPrLine}`,
               "- Contract version or date: Not specified",
               "",
               "## Interface Surface",
