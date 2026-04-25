@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 
 import { Dashboard } from './dashboard';
-import { LocationInventorySummary, RecentSale, TopValueItem } from './dashboard-api.service';
+import { CustomerValueRanking, LocationInventorySummary, RecentSale, TopValueItem } from './dashboard-api.service';
 
 const DEFAULT_SUMMARY = {
   totalInventoryQuantity: 0,
@@ -39,9 +39,9 @@ describe('Dashboard', () => {
     locationSummaryOverride: LocationInventorySummary[] = [],
     topValueItemsOverride: TopValueItem[] = [],
     recentSalesOverride: RecentSale[] = [],
+    customerValueRankingOverride: CustomerValueRanking[] = [],
   ): void {
     httpMock.expectOne((req) => req.url.includes('/items') && !req.url.includes('top-value')).flush({ items: [] });
-    httpMock.expectOne((req) => req.url.includes('/sales') && !req.url.includes('recent')).flush({ sales: [] });
     httpMock
       .expectOne((req) => req.url.includes('/metrics/operations/summary'))
       .flush(summaryOverride);
@@ -54,6 +54,9 @@ describe('Dashboard', () => {
     httpMock
       .expectOne((req) => req.url.includes('/sales/recent'))
       .flush(recentSalesOverride);
+    httpMock
+      .expectOne((req) => req.url.includes('/customers/value-ranking'))
+      .flush(customerValueRankingOverride);
   }
 
   it('should create', async () => {
@@ -178,6 +181,44 @@ describe('Dashboard', () => {
     await fixture.whenStable();
 
     expect(component.model().recentSales.length).toBe(0);
+  });
+
+  it('should use backend-provided customerSummary from /customers/value-ranking', async () => {
+    const customerValueRanking: CustomerValueRanking[] = [
+      {
+        customerName: 'Alice Smith',
+        customerEmail: 'alice@example.com',
+        salesCount: 5,
+        totalUnits: 20,
+        totalValue: 1500,
+      },
+      {
+        customerName: 'Bob Jones',
+        customerEmail: 'bob@example.com',
+        salesCount: 2,
+        totalUnits: 8,
+        totalValue: 400,
+      },
+    ];
+    flushRequests(DEFAULT_SUMMARY, [], [], [], customerValueRanking);
+    await fixture.whenStable();
+
+    const model = component.model();
+    expect(model.customerSummary.length).toBe(2);
+    expect(model.customerSummary[0].customerName).toBe('Alice Smith');
+    expect(model.customerSummary[0].customerEmail).toBe('alice@example.com');
+    expect(model.customerSummary[0].salesCount).toBe(5);
+    expect(model.customerSummary[0].totalUnits).toBe(20);
+    expect(model.customerSummary[0].totalValue).toBe(1500);
+    expect(model.customerSummary[1].customerName).toBe('Bob Jones');
+    expect(model.customerSummary[1].totalValue).toBe(400);
+  });
+
+  it('should show an empty customerSummary list when backend returns an empty array', async () => {
+    flushRequests(DEFAULT_SUMMARY, [], [], [], []);
+    await fixture.whenStable();
+
+    expect(component.model().customerSummary.length).toBe(0);
   });
 
   it('should show an error message and zero summary when the API fails', async () => {

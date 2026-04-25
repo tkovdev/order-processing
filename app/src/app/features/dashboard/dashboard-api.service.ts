@@ -38,6 +38,14 @@ export interface RecentSale {
   totalValue: number;
 }
 
+export interface CustomerValueRanking {
+  customerName: string;
+  customerEmail: string;
+  salesCount: number;
+  totalUnits: number;
+  totalValue: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -48,7 +56,6 @@ export class DashboardApiService {
   fetchDashboardData() {
     return forkJoin({
       itemsResponse: this.http.get<{ items: unknown[] }>(`${this.apiBaseUrl}/items`),
-      salesResponse: this.http.get<{ sales: unknown[] }>(`${this.apiBaseUrl}/sales`),
       operationsSummary: this.http.get<OperationsSummary>(
         `${this.apiBaseUrl}/metrics/operations/summary`,
       ),
@@ -59,6 +66,9 @@ export class DashboardApiService {
         `${this.apiBaseUrl}/inventory/items/top-value?limit=5`,
       ),
       recentSales: this.http.get<RecentSale[]>(`${this.apiBaseUrl}/sales/recent?limit=10`),
+      customerValueRanking: this.http.get<CustomerValueRanking[]>(
+        `${this.apiBaseUrl}/customers/value-ranking?limit=8`,
+      ),
     });
   }
 }
