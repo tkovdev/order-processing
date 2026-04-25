@@ -90,31 +90,18 @@ const recentSales = async (req: Request, res: Response): Promise<void> => {
   try {
     const items = await SaleModel.aggregate([
       {
-        $lookup: {
-          from: "items",
-          let: { saleItems: "$items" },
-          pipeline: [
-            { $match: { $expr: { $in: ["$_id", "$$saleItems.itemId"] } } },
-            {
-              $set: {
-                saleItem: {
-                  $first: {
-                    $filter: {
-                      input: "$$saleItems",
-                      as: "si",
-                      cond: { $eq: ["$$si.itemId", "$_id"] }
-                    }
-                  }
-                }
-              }
-            },
-            {
-              $set: {
-                lineTotal: { $multiply: ["$price", "$saleItem.quantity"] }
-              }
-            }
-          ],
-          as: "itemDocs"
+        $unwind: "$items"
+      },
+      {
+        $group: {
+          _id: "$_id",
+          createdAt: { $first: "$createdAt" },
+          status: { $first: "$status" },
+          customerName: { $first: "$customer.name" },
+          customerEmail: { $first: "$customer.email" },
+          lineCount: { $sum: 1 },
+          totalUnits: { $sum: "$items.quantity" },
+          totalValue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } }
         }
       },
       {
@@ -123,14 +110,13 @@ const recentSales = async (req: Request, res: Response): Promise<void> => {
           saleId: "$_id",
           createdAt: 1,
           status: 1,
-          customerName: "$customer.name",
-          customerEmail: "$customer.email",
-          lineCount: { $size: "$itemDocs" },
-          totalUnits: { $sum: "$itemDocs.saleItem.quantity" },
-          totalValue: { $sum: "$itemDocs.lineTotal" }
+          customerName: 1,
+          customerEmail: 1,
+          lineCount: 1,
+          totalUnits: 1,
+          totalValue: 1
         }
       },
-
       { $sort: { createdAt: -1 } },
       ...(parsedLimit.data ? [{ $limit: parsedLimit.data }] : [])
     ]);

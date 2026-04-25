@@ -6,6 +6,7 @@ export interface ISale {
   items: [{
     itemId: mongoose.Types.ObjectId;
     quantity: number;
+    price: number;
   }],
   status: 'submitted' | 'completed';
   customer: {
@@ -21,7 +22,8 @@ const SaleSchema: Schema = new Schema(
 {
   items: [{
     itemId: { type: Schema.Types.ObjectId, ref: 'Item', required: true },
-    quantity: { type: Number, required: true }
+    quantity: { type: Number, required: true },
+    price: { type: Number, required: true }
   }],
   customer: {
     name: { type: String, required: true },

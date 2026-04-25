@@ -18,42 +18,14 @@ const getCustomerValueRank = async (req: Request, res: Response): Promise<void> 
 
     try {
         const items = await SaleModel.aggregate([
-            {
-                $lookup: {
-                    from: "items",
-                    let: { saleItems: "$items" },
-                    pipeline: [
-                        { $match: { $expr: { $in: ["$_id", "$$saleItems.itemId"] } } },
-                        {
-                            $set: {
-                                saleItem: {
-                                    $first: {
-                                        $filter: {
-                                            input: "$$saleItems",
-                                            as: "si",
-                                            cond: { $eq: ["$$si.itemId", "$_id"] }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            $set: {
-                                lineTotal: { $multiply: ["$price", "$saleItem.quantity"] }
-                            }
-                        }
-                    ],
-                    as: "itemDocs"
-                }
-            },
-            { $unwind: "$itemDocs" },
+            { $unwind: "$items" },
             {
                 $group: {
                     _id: "$customer.email",
                     customerName: { $first: "$customer.name" },
                     saleIds: { $addToSet: "$_id" },
-                    totalUnits: { $sum: "$itemDocs.saleItem.quantity" },
-                    totalValue: { $sum: "$itemDocs.lineTotal" }
+                    totalUnits: { $sum: "$items.quantity" },
+                    totalValue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } }
                 }
             },
             {
@@ -72,7 +44,7 @@ const getCustomerValueRank = async (req: Request, res: Response): Promise<void> 
                 }
             },
             {
-                $sort: { quantity: -1 }  // -1 = descending, 1 = ascending
+                $sort: { salesCount: -1 }  // -1 = descending, 1 = ascending
             },
             ...(parsedLimit.data ? [{ $limit: parsedLimit.data }] : [])
         ]);
