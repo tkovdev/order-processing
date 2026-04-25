@@ -177,7 +177,8 @@
 								<span>{{ risk.location }}</span>
 							</div>
 							<div class="right-align">
-								<span>{{ risk.quantity | number }} units left</span>
+								<span>{{ risk.quantity | number }} / {{ risk.targetQuantity | number }} units</span>
+								<span class="risk-level-badge" [class.high]="risk.riskLevel === 'high'" [class.medium]="risk.riskLevel === 'medium'" [class.low]="risk.riskLevel === 'low'">{{ risk.riskLevel }}</span>
 								<strong>{{ risk.atRiskValue | currency }}</strong>
 							</div>
 						</li>

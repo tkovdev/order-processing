@@ -3,16 +3,7 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { Subject, interval, of } from 'rxjs';
 import { catchError, startWith, switchMap, takeUntil } from 'rxjs/operators';
-import { DashboardApiService, CustomerValueRanking, LocationInventorySummary, OperationsSummary, RecentSale, TopValueItem } from './dashboard-api.service';
-
-interface Item {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  location: string;
-  type: string;
-}
+import { DashboardApiService, CustomerValueRanking, InventoryRiskExposure, LocationInventorySummary, OperationsSummary, RecentSale, TopValueItem } from './dashboard-api.service';
 
 interface InventoryByLocation {
   location: string;
@@ -40,11 +31,15 @@ interface CustomerSummary {
 }
 
 interface RiskItem {
+  itemId: string;
   name: string;
   location: string;
   quantity: number;
   unitPrice: number;
   atRiskValue: number;
+  targetQuantity: number;
+  riskScore: number;
+  riskLevel: string;
 }
 
 interface DashboardViewModel {
@@ -117,7 +112,6 @@ export class Dashboard implements OnInit, OnDestroy {
         this.loading.set(false);
         this.errorMessage.set('Unable to load dashboard data from the API.');
         return of({
-          itemsResponse: { items: [] },
           operationsSummary: {
             totalInventoryQuantity: 0,
             totalInventoryValue: 0,
@@ -129,13 +123,12 @@ export class Dashboard implements OnInit, OnDestroy {
           topValueItems: [] as TopValueItem[],
           recentSales: [] as RecentSale[],
           customerValueRanking: [] as CustomerValueRanking[],
+          inventoryRiskExposure: [] as InventoryRiskExposure[],
           error,
         });
       }),
-      switchMap(({ itemsResponse, operationsSummary, locationSummary, topValueItems, recentSales, customerValueRanking }) => {
-        const items = this.normalizeItems(itemsResponse.items ?? []);
-
-        this.model.set(this.buildViewModel(items, operationsSummary, locationSummary, topValueItems, recentSales, customerValueRanking));
+      switchMap(({ operationsSummary, locationSummary, topValueItems, recentSales, customerValueRanking, inventoryRiskExposure }) => {
+        this.model.set(this.buildViewModel(operationsSummary, locationSummary, topValueItems, recentSales, customerValueRanking, inventoryRiskExposure));
         this.lastUpdated.set(new Date());
         this.loading.set(false);
 
@@ -144,7 +137,7 @@ export class Dashboard implements OnInit, OnDestroy {
     );
   }
 
-  private buildViewModel(items: Item[], summary: OperationsSummary, locationSummary: LocationInventorySummary[], topValueItems: TopValueItem[], recentSales: RecentSale[], customerValueRanking: CustomerValueRanking[]): DashboardViewModel {
+  private buildViewModel(summary: OperationsSummary, locationSummary: LocationInventorySummary[], topValueItems: TopValueItem[], recentSales: RecentSale[], customerValueRanking: CustomerValueRanking[], inventoryRiskExposure: InventoryRiskExposure[]): DashboardViewModel {
     const {
       totalInventoryQuantity,
       totalInventoryValue,
@@ -172,17 +165,17 @@ export class Dashboard implements OnInit, OnDestroy {
       totalValue: customer.totalValue,
     }));
 
-    const atRiskItems = items
-      .filter((item) => item.quantity <= 20 && item.price >= 100)
-      .map((item) => ({
-        name: item.name,
-        location: item.location,
-        quantity: item.quantity,
-        unitPrice: item.price,
-        atRiskValue: item.quantity * item.price,
-      }))
-      .sort((a, b) => b.atRiskValue - a.atRiskValue)
-      .slice(0, 6);
+    const atRiskItems: RiskItem[] = inventoryRiskExposure.map((item) => ({
+      itemId: item.itemId,
+      name: item.name,
+      location: item.location,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      atRiskValue: item.atRiskValue,
+      targetQuantity: item.targetQuantity,
+      riskScore: item.riskScore,
+      riskLevel: item.riskLevel,
+    }));
 
     return {
       totalInventoryQuantity,
@@ -196,41 +189,6 @@ export class Dashboard implements OnInit, OnDestroy {
       customerSummary,
       atRiskItems,
     };
-  }
-
-  private normalizeItems(payload: unknown[]): Item[] {
-    return payload
-      .map((raw) => {
-        const source = raw as Record<string, unknown>;
-        const id = this.readString(source, '_id') || this.readString(source, 'id');
-        const name = this.readString(source, 'name');
-        const price = this.readNumber(source, 'price');
-        const quantity = this.readNumber(source, 'quantity');
-
-        if (!id || !name || price === null || quantity === null) {
-          return null;
-        }
-
-        return {
-          id,
-          name,
-          price,
-          quantity,
-          location: this.readString(source, 'location') || 'Unassigned',
-          type: this.readString(source, 'type') || 'unknown',
-        };
-      })
-      .filter((item): item is Item => item !== null);
-  }
-
-  private readString(source: Record<string, unknown>, key: string): string | null {
-    const value = source[key];
-    return typeof value === 'string' ? value : null;
-  }
-
-  private readNumber(source: Record<string, unknown>, key: string): number | null {
-    const value = source[key];
-    return typeof value === 'number' ? value : null;
   }
 
 }

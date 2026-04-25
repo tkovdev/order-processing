@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 
 import { Dashboard } from './dashboard';
-import { CustomerValueRanking, LocationInventorySummary, RecentSale, TopValueItem } from './dashboard-api.service';
+import { CustomerValueRanking, InventoryRiskExposure, LocationInventorySummary, RecentSale, TopValueItem } from './dashboard-api.service';
 
 const DEFAULT_SUMMARY = {
   totalInventoryQuantity: 0,
@@ -40,8 +40,8 @@ describe('Dashboard', () => {
     topValueItemsOverride: TopValueItem[] = [],
     recentSalesOverride: RecentSale[] = [],
     customerValueRankingOverride: CustomerValueRanking[] = [],
+    inventoryRiskExposureOverride: InventoryRiskExposure[] = [],
   ): void {
-    httpMock.expectOne((req) => req.url.includes('/items') && !req.url.includes('top-value')).flush({ items: [] });
     httpMock
       .expectOne((req) => req.url.includes('/metrics/operations/summary'))
       .flush(summaryOverride);
@@ -57,6 +57,9 @@ describe('Dashboard', () => {
     httpMock
       .expectOne((req) => req.url.includes('/customers/value-ranking'))
       .flush(customerValueRankingOverride);
+    httpMock
+      .expectOne((req) => req.url.includes('/inventory/risk/exposure'))
+      .flush(inventoryRiskExposureOverride);
   }
 
   it('should create', async () => {
@@ -221,8 +224,57 @@ describe('Dashboard', () => {
     expect(component.model().customerSummary.length).toBe(0);
   });
 
+  it('should use backend-provided atRiskItems from /inventory/risk/exposure', async () => {
+    const inventoryRiskExposure: InventoryRiskExposure[] = [
+      {
+        itemId: 'item-1',
+        name: 'Critical Widget',
+        location: 'Warehouse A',
+        quantity: 5,
+        unitPrice: 200,
+        atRiskValue: 1000,
+        targetQuantity: 25,
+        riskScore: 80,
+        riskLevel: 'high',
+      },
+      {
+        itemId: 'item-2',
+        name: 'Medium Widget',
+        location: 'Warehouse B',
+        quantity: 12,
+        unitPrice: 150,
+        atRiskValue: 1800,
+        targetQuantity: 20,
+        riskScore: 55,
+        riskLevel: 'medium',
+      },
+    ];
+    flushRequests(DEFAULT_SUMMARY, [], [], [], [], inventoryRiskExposure);
+    await fixture.whenStable();
+
+    const model = component.model();
+    expect(model.atRiskItems.length).toBe(2);
+    expect(model.atRiskItems[0].itemId).toBe('item-1');
+    expect(model.atRiskItems[0].name).toBe('Critical Widget');
+    expect(model.atRiskItems[0].location).toBe('Warehouse A');
+    expect(model.atRiskItems[0].quantity).toBe(5);
+    expect(model.atRiskItems[0].unitPrice).toBe(200);
+    expect(model.atRiskItems[0].atRiskValue).toBe(1000);
+    expect(model.atRiskItems[0].targetQuantity).toBe(25);
+    expect(model.atRiskItems[0].riskScore).toBe(80);
+    expect(model.atRiskItems[0].riskLevel).toBe('high');
+    expect(model.atRiskItems[1].riskLevel).toBe('medium');
+  });
+
+  it('should show an empty atRiskItems list when backend returns an empty array', async () => {
+    flushRequests(DEFAULT_SUMMARY, [], [], [], [], []);
+    await fixture.whenStable();
+
+    expect(component.model().atRiskItems.length).toBe(0);
+  });
+
   it('should show an error message and zero summary when the API fails', async () => {
-    httpMock.expectOne((req) => req.url.includes('/items') && !req.url.includes('top-value')).flush('', { status: 500, statusText: 'Server Error' });
+    httpMock.expectOne((req) => req.url.includes('/metrics/operations/summary')).flush('', { status: 500, statusText: 'Server Error' });
     // forkJoin cancels remaining requests when one fails; clean up any that remain open
     httpMock.match(() => true);
     await fixture.whenStable();
