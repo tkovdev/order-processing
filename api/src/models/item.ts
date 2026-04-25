@@ -2,6 +2,7 @@ import mongoose, { Schema } from 'mongoose';
 
 // Interface for Worker document
 export interface IItem {
+  sku: string;
   name: string;
   price: number;
   quantity: number;
@@ -22,16 +23,17 @@ export enum ItemType {
 
 const ItemSchema: Schema = new Schema(
   {
-  name: { type: String, required: true },
-  price: { type: Number, required: true },
-  quantity: { type: Number, required: true },
-  dimensions: {
-    length: { type: Number, required: true },
-    width: { type: Number, required: true },
-    height: { type: Number, required: true }
-  },
-  location: { type: String },
-  type: { type: String, enum: Object.values(ItemType), required: true }
+    sku: { type: String, required: true },
+    name: { type: String, required: true },
+    price: { type: Number, required: true },
+    quantity: { type: Number, required: true },
+    dimensions: {
+      length: { type: Number, required: true },
+      width: { type: Number, required: true },
+      height: { type: Number, required: true }
+    },
+    location: { type: String },
+    type: { type: String, enum: Object.values(ItemType), required: true }
   });
 
 // Create and export the Item model

@@ -26,9 +26,9 @@ const seedData = async (req: Request, res: Response): Promise<void> => {
 
     // Create sample items
     const items: IItem[] = [
-      { name: 'Steel Rod', price: 10, quantity: 100, dimensions: { length: 100, width: 5, height: 5 }, location: 'Warehouse A', type: ItemType.raw_material },
-      { name: 'Gear', price: 50, quantity: 50, dimensions: { length: 20, width: 20, height: 10 }, location: 'Warehouse B', type: ItemType.component },
-      { name: 'Bicycle', price: 200, quantity: 20, dimensions: { length: 150, width: 50, height: 100 }, location: 'Warehouse C', type: ItemType.finished_good }
+      { sku: 'rms-0001', name: 'Steel Rod', price: 10, quantity: 100, dimensions: { length: 100, width: 5, height: 5 }, location: 'Warehouse A', type: ItemType.raw_material },
+      { sku: 'cms-0001', name: 'Gear', price: 50, quantity: 50, dimensions: { length: 20, width: 20, height: 10 }, location: 'Warehouse B', type: ItemType.component },
+      { sku: 'fxl-0001', name: 'Bicycle', price: 200, quantity: 20, dimensions: { length: 150, width: 50, height: 100 }, location: 'Warehouse C', type: ItemType.finished_good }
     ];
 
     await ItemModel.insertMany(items);
