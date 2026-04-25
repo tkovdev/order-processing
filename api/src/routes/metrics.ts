@@ -8,20 +8,36 @@ const router = express.Router();
 // Function to get all workers
 const getOperationsSummary = async (req: Request, res: Response): Promise<void> => {
   try {
-    const itemsQuantityPrice = (await ItemModel.find().select('quantity price')).map((x) => {
-      return {_id: x._id.toString(), price: x.price, quantity: x.quantity}
-    });
-    const salesStatuses = (await SaleModel.find().select('status')).map((x) => {
-      return {_id: x._id.toString(), status: x.status}
-    });
-    const inventoryTotals = inventoryQuantityPrices(itemsQuantityPrice);
-    const salesTotals = salesByStatus(salesStatuses);
+    const itemQuantityValue = await ItemModel.aggregate([
+      { 
+        $group: { 
+          _id: null, quantity: { $sum: "$quantity" }, value: { $sum: {$multiply: ["$price", "$quantity"]} }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+        }
+      }
+    ]);
+    
+    const salesStatuses = await SaleModel.aggregate([
+      { 
+        $group: { 
+          _id: "$status", total: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const getTotalForStatus = (status: string) => salesStatuses.find(s => s._id === status)?.total || 0;
+
+    // const salesTotals = salesByStatus(salesStatuses);
     res.status(200).json({
-      totalInventoryQuantity: inventoryTotals.quantity,
-      totalInventoryValue: inventoryTotals.price * inventoryTotals.quantity,
-      totalSales: salesTotals.total,
-      submittedSales: salesTotals.submitted,
-      completedSales: salesTotals.completed
+      totalInventoryQuantity: itemQuantityValue[0].quantity,
+      totalInventoryValue: itemQuantityValue[0].value,
+      totalSales: salesStatuses.reduce((sum, s) => sum + s.total, 0),
+      submittedSales: getTotalForStatus("submitted"),
+      completedSales: getTotalForStatus("completed"),
     });
   } catch (error) {
     console.error('Error fetching items:', error);
