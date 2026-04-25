@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 
 import { Dashboard } from './dashboard';
-import { LocationInventorySummary, TopValueItem } from './dashboard-api.service';
+import { LocationInventorySummary, RecentSale, TopValueItem } from './dashboard-api.service';
 
 const DEFAULT_SUMMARY = {
   totalInventoryQuantity: 0,
@@ -38,9 +38,10 @@ describe('Dashboard', () => {
     summaryOverride = DEFAULT_SUMMARY,
     locationSummaryOverride: LocationInventorySummary[] = [],
     topValueItemsOverride: TopValueItem[] = [],
+    recentSalesOverride: RecentSale[] = [],
   ): void {
     httpMock.expectOne((req) => req.url.includes('/items') && !req.url.includes('top-value')).flush({ items: [] });
-    httpMock.expectOne((req) => req.url.includes('/sales')).flush({ sales: [] });
+    httpMock.expectOne((req) => req.url.includes('/sales') && !req.url.includes('recent')).flush({ sales: [] });
     httpMock
       .expectOne((req) => req.url.includes('/metrics/operations/summary'))
       .flush(summaryOverride);
@@ -50,6 +51,9 @@ describe('Dashboard', () => {
     httpMock
       .expectOne((req) => req.url.includes('/inventory/items/top-value'))
       .flush(topValueItemsOverride);
+    httpMock
+      .expectOne((req) => req.url.includes('/sales/recent'))
+      .flush(recentSalesOverride);
   }
 
   it('should create', async () => {
@@ -128,6 +132,52 @@ describe('Dashboard', () => {
     await fixture.whenStable();
 
     expect(component.model().topValueItems.length).toBe(0);
+  });
+
+  it('should use backend-provided recentSales from /sales/recent', async () => {
+    const recentSales: RecentSale[] = [
+      {
+        saleId: 'sale-1',
+        createdAt: '2026-04-23T19:15:00.000Z',
+        status: 'submitted',
+        customerName: 'Alice Smith',
+        customerEmail: 'alice@example.com',
+        lineCount: 3,
+        totalUnits: 10,
+        totalValue: 250,
+      },
+      {
+        saleId: 'sale-2',
+        createdAt: '2026-04-22T10:00:00.000Z',
+        status: 'completed',
+        customerName: 'Bob Jones',
+        customerEmail: 'bob@example.com',
+        lineCount: 1,
+        totalUnits: 2,
+        totalValue: 80,
+      },
+    ];
+    flushRequests(DEFAULT_SUMMARY, [], [], recentSales);
+    await fixture.whenStable();
+
+    const model = component.model();
+    expect(model.recentSales.length).toBe(2);
+    expect(model.recentSales[0].saleId).toBe('sale-1');
+    expect(model.recentSales[0].customerName).toBe('Alice Smith');
+    expect(model.recentSales[0].customerEmail).toBe('alice@example.com');
+    expect(model.recentSales[0].status).toBe('submitted');
+    expect(model.recentSales[0].lineCount).toBe(3);
+    expect(model.recentSales[0].totalUnits).toBe(10);
+    expect(model.recentSales[0].totalValue).toBe(250);
+    expect(model.recentSales[1].saleId).toBe('sale-2');
+    expect(model.recentSales[1].status).toBe('completed');
+  });
+
+  it('should show an empty recentSales list when backend returns an empty array', async () => {
+    flushRequests(DEFAULT_SUMMARY, [], [], []);
+    await fixture.whenStable();
+
+    expect(component.model().recentSales.length).toBe(0);
   });
 
   it('should show an error message and zero summary when the API fails', async () => {
