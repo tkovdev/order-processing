@@ -3,9 +3,7 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { Subject, interval, of } from 'rxjs';
 import { catchError, startWith, switchMap, takeUntil } from 'rxjs/operators';
-import { DashboardApiService, LocationInventorySummary, OperationsSummary, RecentSale, TopValueItem } from './dashboard-api.service';
-
-type SaleStatus = 'submitted' | 'completed' | string;
+import { DashboardApiService, CustomerValueRanking, LocationInventorySummary, OperationsSummary, RecentSale, TopValueItem } from './dashboard-api.service';
 
 interface Item {
   id: string;
@@ -14,22 +12,6 @@ interface Item {
   quantity: number;
   location: string;
   type: string;
-}
-
-interface SaleLine {
-  itemId: string;
-  quantity: number;
-}
-
-interface Sale {
-  id: string;
-  status: SaleStatus;
-  customer: {
-    name: string;
-    email: string;
-    address: string;
-  };
-  items: SaleLine[];
 }
 
 interface InventoryByLocation {
@@ -136,7 +118,6 @@ export class Dashboard implements OnInit, OnDestroy {
         this.errorMessage.set('Unable to load dashboard data from the API.');
         return of({
           itemsResponse: { items: [] },
-          salesResponse: { sales: [] },
           operationsSummary: {
             totalInventoryQuantity: 0,
             totalInventoryValue: 0,
@@ -147,14 +128,14 @@ export class Dashboard implements OnInit, OnDestroy {
           locationSummary: [] as LocationInventorySummary[],
           topValueItems: [] as TopValueItem[],
           recentSales: [] as RecentSale[],
+          customerValueRanking: [] as CustomerValueRanking[],
           error,
         });
       }),
-      switchMap(({ itemsResponse, salesResponse, operationsSummary, locationSummary, topValueItems, recentSales }) => {
+      switchMap(({ itemsResponse, operationsSummary, locationSummary, topValueItems, recentSales, customerValueRanking }) => {
         const items = this.normalizeItems(itemsResponse.items ?? []);
-        const sales = this.normalizeSales(salesResponse.sales ?? []);
 
-        this.model.set(this.buildViewModel(items, sales, operationsSummary, locationSummary, topValueItems, recentSales));
+        this.model.set(this.buildViewModel(items, operationsSummary, locationSummary, topValueItems, recentSales, customerValueRanking));
         this.lastUpdated.set(new Date());
         this.loading.set(false);
 
@@ -163,9 +144,7 @@ export class Dashboard implements OnInit, OnDestroy {
     );
   }
 
-  private buildViewModel(items: Item[], sales: Sale[], summary: OperationsSummary, locationSummary: LocationInventorySummary[], topValueItems: TopValueItem[], recentSales: RecentSale[]): DashboardViewModel {
-    const priceByItemId = new Map<string, number>(items.map((item) => [item.id, item.price]));
-
+  private buildViewModel(items: Item[], summary: OperationsSummary, locationSummary: LocationInventorySummary[], topValueItems: TopValueItem[], recentSales: RecentSale[], customerValueRanking: CustomerValueRanking[]): DashboardViewModel {
     const {
       totalInventoryQuantity,
       totalInventoryValue,
@@ -185,34 +164,13 @@ export class Dashboard implements OnInit, OnDestroy {
       value: item.value,
     }));
 
-    const customerMap = new Map<string, CustomerSummary>();
-    for (const sale of sales) {
-      const emailKey = sale.customer.email || sale.id;
-      const totalUnits = sale.items.reduce((sum, line) => sum + line.quantity, 0);
-      const totalValue = sale.items.reduce(
-        (sum, line) => sum + (priceByItemId.get(line.itemId) ?? 0) * line.quantity,
-        0,
-      );
-
-      const existing = customerMap.get(emailKey);
-      if (existing) {
-        existing.salesCount += 1;
-        existing.totalUnits += totalUnits;
-        existing.totalValue += totalValue;
-      } else {
-        customerMap.set(emailKey, {
-          customerName: sale.customer.name,
-          customerEmail: sale.customer.email,
-          salesCount: 1,
-          totalUnits,
-          totalValue,
-        });
-      }
-    }
-
-    const customerSummary = Array.from(customerMap.values())
-      .sort((a, b) => b.totalValue - a.totalValue)
-      .slice(0, 8);
+    const customerSummary: CustomerSummary[] = customerValueRanking.map((customer) => ({
+      customerName: customer.customerName,
+      customerEmail: customer.customerEmail,
+      salesCount: customer.salesCount,
+      totalUnits: customer.totalUnits,
+      totalValue: customer.totalValue,
+    }));
 
     const atRiskItems = items
       .filter((item) => item.quantity <= 20 && item.price >= 100)
@@ -263,47 +221,6 @@ export class Dashboard implements OnInit, OnDestroy {
         };
       })
       .filter((item): item is Item => item !== null);
-  }
-
-  private normalizeSales(payload: unknown[]): Sale[] {
-    return payload
-      .map((raw) => {
-        const source = raw as Record<string, unknown>;
-        const id = this.readString(source, '_id') || this.readString(source, 'id');
-        const status = this.readString(source, 'status') || 'submitted';
-        const customerRaw = (source['customer'] ?? {}) as Record<string, unknown>;
-        const itemsRaw = Array.isArray(source['items']) ? source['items'] : [];
-
-        if (!id) {
-          return null;
-        }
-
-        const items: SaleLine[] = itemsRaw
-          .map((line) => {
-            const lineSource = line as Record<string, unknown>;
-            const itemId = this.readString(lineSource, 'itemId');
-            const quantity = this.readNumber(lineSource, 'quantity');
-
-            if (!itemId || quantity === null) {
-              return null;
-            }
-
-            return { itemId, quantity };
-          })
-          .filter((line): line is SaleLine => line !== null);
-
-        return {
-          id,
-          status,
-          customer: {
-            name: this.readString(customerRaw, 'name') || 'Unknown Customer',
-            email: this.readString(customerRaw, 'email') || 'unknown@example.com',
-            address: this.readString(customerRaw, 'address') || 'N/A',
-          },
-          items,
-        };
-      })
-      .filter((sale): sale is Sale => sale !== null);
   }
 
   private readString(source: Record<string, unknown>, key: string): string | null {
