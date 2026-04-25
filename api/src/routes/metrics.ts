@@ -18,7 +18,7 @@ const getOperationsSummary = async (req: Request, res: Response): Promise<void> 
     const salesTotals = salesByStatus(salesStatuses);
     res.status(200).json({
       totalInventoryQuantity: inventoryTotals.quantity,
-      totalInventoryValue: inventoryTotals.price,
+      totalInventoryValue: inventoryTotals.price * inventoryTotals.quantity,
       totalSales: salesTotals.total,
       submittedSales: salesTotals.submitted,
       completedSales: salesTotals.completed
