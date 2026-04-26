@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { ItemModel } from '../models/item';
 import { z } from 'zod';
+import { getLocationName } from '../logic/locationLogic';
 
 const router = express.Router();
 
@@ -161,9 +162,45 @@ const getInventoryExposureRisk = async (req: Request, res: Response): Promise<vo
 
 }
 
+const getLocationOverviewByLocation = async (req: Request, res: Response): Promise<void> => {
+  const schema = z.coerce.string();
+  const parsedSchema = schema.safeParse(req.params.location);
+  if (!parsedSchema.success) {
+    res.status(400).json(z.treeifyError(parsedSchema.error));
+    return;
+  }
+  try {
+    const items = await ItemModel.aggregate([
+        { $match: { location: { $regex: new RegExp(`^${getLocationName(parsedSchema.data)}$`, 'i') } } },
+        { $group: { _id: "$location", itemCount: { $sum: 1 }, quantity: { $sum: "$quantity" }, value: { $sum: {$multiply: ["$price", "$quantity"]} } } },
+        { 
+            $project: {
+                _id: 0,
+                location: "$_id",
+                inventorySummary: {
+                  itemCount: "$itemCount",
+                  totalUnits: "$quantity",
+                  totalValue: "$value"
+                }
+            }
+        }
+    ]);
+    res.status(200).json(items);
+    return;
+  } catch (error) {
+    console.error('Error fetching items:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch items from database',
+      message: 'An internal server error occurred'
+    });
+    return;
+  }
+};
+
 
 // Register routes
 router.get('/locations/summary', getLocationInventorySummary);
+router.get('/locations/:location/overview', getLocationOverviewByLocation);
 router.get('/items/top-value', getTopValueInventoryItems);
 router.get('/risk/exposure', getInventoryExposureRisk);
 
