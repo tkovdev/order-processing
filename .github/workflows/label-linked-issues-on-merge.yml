@@ -20,79 +20,43 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const prNumber = context.payload.pull_request?.number;
+            const mergeCommitSha = context.payload.pull_request?.merge_commit_sha;
 
-            if (!prNumber) {
-              core.info("No pull request number found in payload.");
+            if (!prNumber || !mergeCommitSha) {
+              core.info("Missing PR number or merge commit SHA.");
               return;
             }
 
-            const query = `
-              query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
-                repository(owner: $owner, name: $repo) {
-                  pullRequest(number: $number) {
-                    closingIssuesReferences(first: 50, after: $cursor) {
-                      nodes {
-                        number
-                        labels(first: 100) {
-                          nodes {
-                            name
-                          }
-                        }
-                      }
-                      pageInfo {
-                        hasNextPage
-                        endCursor
-                      }
-                    }
-                  }
+            const mergeCommit = await github.rest.repos.getCommit({ owner, repo, ref: mergeCommitSha });
+            const mergeCommitMessage = mergeCommit.data.commit.message;
+
+            if (!/api-ready/i.test(mergeCommitMessage)) {
+              core.info("Merge commit does not contain 'api-ready'. Skipping.");
+              return;
+            }
+
+            const closingPattern = /(?:closes?|fixes?|resolves?)\s+#(\d+)/gi;
+            const issueNumbers = [];
+            let match;
+            while ((match = closingPattern.exec(mergeCommitMessage)) !== null) {
+              issueNumbers.push(parseInt(match[1], 10));
+            }
+
+            if (issueNumbers.length === 0) {
+              core.info("No closing issue references found in merge commit message.");
+              return;
+            }
+
+            for (const issueNumber of issueNumbers) {
+              try {
+                const issue = await github.rest.issues.get({ owner, repo, issue_number: issueNumber });
+                if (issue.data.labels.some((l) => l.name === "api-ready")) {
+                  core.info(`Issue #${issueNumber} already has api-ready label.`);
+                  continue;
                 }
+                await github.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: ["api-ready"] });
+                core.info(`Added api-ready label to issue #${issueNumber}.`);
+              } catch (e) {
+                core.warning(`Could not process issue #${issueNumber}: ${e.message}`);
               }
-            `;
-
-            const linkedIssues = [];
-            let cursor = null;
-            let hasNextPage = true;
-
-            while (hasNextPage) {
-              const result = await github.graphql(query, {
-                owner,
-                repo,
-                number: prNumber,
-                cursor,
-              });
-
-              const refs = result.repository.pullRequest.closingIssuesReferences;
-              linkedIssues.push(...refs.nodes);
-              hasNextPage = refs.pageInfo.hasNextPage;
-              cursor = refs.pageInfo.endCursor;
-            }
-
-            if (linkedIssues.length === 0) {
-              core.info(`No linked issues found for PR #${prNumber}.`);
-              return;
-            }
-
-            for (const issue of linkedIssues) {
-              const labels = issue.labels.nodes.map((label) => label.name);
-              const isBackendIssue = labels.includes("back-end");
-              const hasApiReadyLabel = labels.includes("api-ready");
-
-              if (!isBackendIssue) {
-                core.info(`Skipping issue #${issue.number}: not labeled back-end.`);
-                continue;
-              }
-
-              if (hasApiReadyLabel) {
-                core.info(`Issue #${issue.number} already has api-ready label.`);
-                continue;
-              }
-
-              await github.rest.issues.addLabels({
-                owner,
-                repo,
-                issue_number: issue.number,
-                labels: ["api-ready"],
-              });
-
-              core.info(`Added api-ready label to issue #${issue.number}.`);
             }
