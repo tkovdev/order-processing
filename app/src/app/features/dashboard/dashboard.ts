@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { Subject, merge, of } from 'rxjs';
 import { finalize, map, switchMap, takeUntil, tap } from 'rxjs/operators';
@@ -22,7 +23,7 @@ const EMPTY_MODEL: DashboardViewModel = {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, ProgressSpinnerModule],
+  imports: [CommonModule, RouterLink, ProgressSpinnerModule],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
@@ -58,6 +59,14 @@ export class Dashboard implements OnInit, OnDestroy {
 
   refreshNow(): void {
     this.manualRefresh$.next();
+  }
+
+  toLocationSlug(location: string): string {
+    return location
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
   }
 
   private fetchDashboardData() {

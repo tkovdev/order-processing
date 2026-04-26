@@ -139,6 +139,24 @@
 	margin: 0;
 }
 
+.panel-heading {
+	align-items: center;
+	display: flex;
+	gap: 0.6rem;
+	justify-content: space-between;
+}
+
+.panel-link {
+	color: #214e9f;
+	font-size: 0.82rem;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.panel-link:hover {
+	text-decoration: underline;
+}
+
 .data-table {
 	border-collapse: collapse;
 	width: 100%;
@@ -162,6 +180,16 @@
 
 .data-table small {
 	color: #667394;
+}
+
+.location-link {
+	color: #214e9f;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.location-link:hover {
+	text-decoration: underline;
 }
 
 .status-badge {

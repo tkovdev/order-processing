@@ -1,0 +1,15 @@
+.location-details-shell {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.location-details-shell h1 {
+  color: #16203b;
+  font-size: clamp(1.35rem, 2vw, 1.9rem);
+  margin: 0;
+}
+
+.location-details-shell p {
+  color: #4b587a;
+  margin: 0;
+}
