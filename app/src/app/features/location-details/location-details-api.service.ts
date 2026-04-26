@@ -112,11 +112,17 @@ export class LocationDetailsApiService {
 
         const typeBreakdown = [...typeMap.values()].sort((left, right) => right.value - left.value);
 
+        const itemCount = summary?.inventorySummary.itemCount ?? itemDetails.length;
+        const totalUnits = summary?.inventorySummary.totalUnits
+          ?? itemDetails.reduce((sum, item) => sum + item.quantity, 0);
+        const totalValue = summary?.inventorySummary.totalValue
+          ?? itemDetails.reduce((sum, item) => sum + item.value, 0);
+
         return {
           location,
-          itemCount: summary?.inventorySummary.itemCount ?? itemDetails.length,
-          totalUnits: summary?.inventorySummary.totalUnits ?? itemDetails.reduce((sum, item) => sum + item.quantity, 0),
-          totalValue: summary?.inventorySummary.totalValue ?? itemDetails.reduce((sum, item) => sum + item.value, 0),
+          itemCount,
+          totalUnits,
+          totalValue,
           items: itemDetails,
           typeBreakdown,
         } satisfies LocationInventoryDetail;

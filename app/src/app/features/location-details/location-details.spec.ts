@@ -37,13 +37,13 @@ describe('LocationDetails', () => {
   });
 
   function flushRequests(
-    summaryOverride: LocationInventorySummaryResponse[] = [],
-    itemsOverride: { items: unknown[] } = { items: [] },
+    summaryResponse: LocationInventorySummaryResponse[] = [],
+    itemsResponse: { items: unknown[] } = { items: [] },
   ): void {
     httpMock
       .expectOne((req) => req.url.includes('/inventory/locations/') && req.url.includes('/summary'))
-      .flush(summaryOverride);
-    httpMock.expectOne((req) => req.url.includes('/items')).flush(itemsOverride);
+      .flush(summaryResponse);
+    httpMock.expectOne((req) => req.url.includes('/items')).flush(itemsResponse);
   }
 
   it('should create', async () => {
@@ -53,13 +53,13 @@ describe('LocationDetails', () => {
   });
 
   it('should use backend-provided itemCount, totalUnits and totalValue from summary endpoint', async () => {
-    const summary: LocationInventorySummaryResponse[] = [
+    const summaryResponse: LocationInventorySummaryResponse[] = [
       {
         location: 'Warehouse A',
         inventorySummary: { itemCount: 7, totalUnits: 120, totalValue: 9500 },
       },
     ];
-    flushRequests(summary, { items: [] });
+    flushRequests(summaryResponse, { items: [] });
     await fixture.whenStable();
 
     expect(component.stats().itemTypes).toBe(7);
