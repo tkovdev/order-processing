@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { Subject, interval, merge, of } from 'rxjs';
+import { Subject, merge, of } from 'rxjs';
 import { finalize, map, switchMap, takeUntil, tap } from 'rxjs/operators';
 import { DashboardApiService, DashboardDataUpdate } from './dashboard-api.service';
 import { CustomerSummary, DashboardViewModel, RiskItem, TopItem } from './models';
@@ -30,8 +30,6 @@ export class Dashboard implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
   private readonly manualRefresh$ = new Subject<void>();
 
-  private readonly refreshMs = 30_000;
-
   loading = signal(true);
   errorMessage = signal('');
   lastUpdated = signal<Date | null>(null);
@@ -39,7 +37,7 @@ export class Dashboard implements OnInit, OnDestroy {
   model = signal<DashboardViewModel>(EMPTY_MODEL);
 
   ngOnInit(): void {
-    merge(of(null), interval(this.refreshMs), this.manualRefresh$)
+    merge(of(null), this.manualRefresh$)
       .pipe(
         switchMap(() => this.fetchDashboardData()),
         takeUntil(this.destroy$),
