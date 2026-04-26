@@ -1,59 +1,23 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { Subject, interval, of } from 'rxjs';
-import { catchError, startWith, switchMap, takeUntil } from 'rxjs/operators';
-import { DashboardApiService, CustomerValueRanking, InventoryRiskExposure, LocationInventorySummary, OperationsSummary, RecentSale, TopValueItem } from './dashboard-api.service';
+import { Subject, interval, merge, of } from 'rxjs';
+import { finalize, map, switchMap, takeUntil, tap } from 'rxjs/operators';
+import { DashboardApiService, DashboardDataUpdate } from './dashboard-api.service';
+import { CustomerSummary, DashboardViewModel, RiskItem, TopItem } from './models';
 
-interface InventoryByLocation {
-  location: string;
-  itemCount: number;
-  quantity: number;
-  value: number;
-}
-
-interface TopItem {
-  itemId: string;
-  name: string;
-  location: string;
-  quantity: number;
-  unitPrice: number;
-  value: number;
-}
-
-
-interface CustomerSummary {
-  customerName: string;
-  customerEmail: string;
-  salesCount: number;
-  totalUnits: number;
-  totalValue: number;
-}
-
-interface RiskItem {
-  itemId: string;
-  name: string;
-  location: string;
-  quantity: number;
-  unitPrice: number;
-  atRiskValue: number;
-  targetQuantity: number;
-  riskScore: number;
-  riskLevel: string;
-}
-
-interface DashboardViewModel {
-  totalInventoryQuantity: number;
-  totalInventoryValue: number;
-  totalSales: number;
-  submittedSales: number;
-  completedSales: number;
-  inventoryByLocation: InventoryByLocation[];
-  topValueItems: TopItem[];
-  recentSales: RecentSale[];
-  customerSummary: CustomerSummary[];
-  atRiskItems: RiskItem[];
-}
+const EMPTY_MODEL: DashboardViewModel = {
+  totalInventoryQuantity: 0,
+  totalInventoryValue: 0,
+  totalSales: 0,
+  submittedSales: 0,
+  completedSales: 0,
+  inventoryByLocation: [],
+  topValueItems: [],
+  recentSales: [],
+  customerSummary: [],
+  atRiskItems: [],
+};
 
 @Component({
   selector: 'app-dashboard',
@@ -64,6 +28,7 @@ interface DashboardViewModel {
 export class Dashboard implements OnInit, OnDestroy {
   private readonly dashboardApi = inject(DashboardApiService);
   private readonly destroy$ = new Subject<void>();
+  private readonly manualRefresh$ = new Subject<void>();
 
   private readonly refreshMs = 30_000;
 
@@ -71,23 +36,11 @@ export class Dashboard implements OnInit, OnDestroy {
   errorMessage = signal('');
   lastUpdated = signal<Date | null>(null);
 
-  model = signal<DashboardViewModel>({
-    totalInventoryQuantity: 0,
-    totalInventoryValue: 0,
-    totalSales: 0,
-    submittedSales: 0,
-    completedSales: 0,
-    inventoryByLocation: [],
-    topValueItems: [],
-    recentSales: [],
-    customerSummary: [],
-    atRiskItems: [],
-  });
+  model = signal<DashboardViewModel>(EMPTY_MODEL);
 
   ngOnInit(): void {
-    interval(this.refreshMs)
+    merge(of(null), interval(this.refreshMs), this.manualRefresh$)
       .pipe(
-        startWith(0),
         switchMap(() => this.fetchDashboardData()),
         takeUntil(this.destroy$),
       )
@@ -100,95 +53,83 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   refreshNow(): void {
-    this.fetchDashboardData().pipe(takeUntil(this.destroy$)).subscribe();
+    this.manualRefresh$.next();
   }
 
   private fetchDashboardData() {
     this.loading.set(true);
     this.errorMessage.set('');
 
-    return this.dashboardApi.fetchDashboardData().pipe(
-      catchError((error: unknown) => {
-        this.loading.set(false);
-        this.errorMessage.set('Unable to load dashboard data from the API.');
-        return of({
-          operationsSummary: {
-            totalInventoryQuantity: 0,
-            totalInventoryValue: 0,
-            totalSales: 0,
-            submittedSales: 0,
-            completedSales: 0,
-          } as OperationsSummary,
-          locationSummary: [] as LocationInventorySummary[],
-          topValueItems: [] as TopValueItem[],
-          recentSales: [] as RecentSale[],
-          customerValueRanking: [] as CustomerValueRanking[],
-          inventoryRiskExposure: [] as InventoryRiskExposure[],
-          error,
-        });
-      }),
-      switchMap(({ operationsSummary, locationSummary, topValueItems, recentSales, customerValueRanking, inventoryRiskExposure }) => {
-        this.model.set(this.buildViewModel(operationsSummary, locationSummary, topValueItems, recentSales, customerValueRanking, inventoryRiskExposure));
-        this.lastUpdated.set(new Date());
-        this.loading.set(false);
-
-        return of(null);
-      }),
+    return this.dashboardApi.fetchDashboardDataUpdates().pipe(
+      tap((update) => this.applyUpdate(update)),
+      finalize(() => this.loading.set(false)),
+      map(() => null),
     );
   }
 
-  private buildViewModel(summary: OperationsSummary, locationSummary: LocationInventorySummary[], topValueItems: TopValueItem[], recentSales: RecentSale[], customerValueRanking: CustomerValueRanking[], inventoryRiskExposure: InventoryRiskExposure[]): DashboardViewModel {
-    const {
-      totalInventoryQuantity,
-      totalInventoryValue,
-      totalSales,
-      submittedSales,
-      completedSales,
-    } = summary;
+  private applyUpdate(update: DashboardDataUpdate): void {
+    if (update.kind === 'error') {
+      this.errorMessage.set('Unable to load dashboard data from the API.');
+      return;
+    }
 
-    const inventoryByLocation = [...locationSummary].sort((a, b) => b.value - a.value);
-
-    const topItems: TopItem[] = topValueItems.map((item) => ({
-      itemId: item.itemId,
-      name: item.name,
-      location: item.location,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      value: item.value,
+    this.model.update((current) => ({
+      ...current,
+      ...this.toModelPatch(update),
     }));
+    this.lastUpdated.set(new Date());
+  }
 
-    const customerSummary: CustomerSummary[] = customerValueRanking.map((customer) => ({
-      customerName: customer.customerName,
-      customerEmail: customer.customerEmail,
-      salesCount: customer.salesCount,
-      totalUnits: customer.totalUnits,
-      totalValue: customer.totalValue,
-    }));
-
-    const atRiskItems: RiskItem[] = inventoryRiskExposure.map((item) => ({
-      itemId: item.itemId,
-      name: item.name,
-      location: item.location,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      atRiskValue: item.atRiskValue,
-      targetQuantity: item.targetQuantity,
-      riskScore: item.riskScore,
-      riskLevel: item.riskLevel,
-    }));
-
-    return {
-      totalInventoryQuantity,
-      totalInventoryValue,
-      totalSales,
-      submittedSales,
-      completedSales,
-      inventoryByLocation,
-      topValueItems: topItems,
-      recentSales,
-      customerSummary,
-      atRiskItems,
-    };
+  private toModelPatch(update: DashboardDataUpdate): Partial<DashboardViewModel> {
+    switch (update.kind) {
+      case 'operationsSummary':
+        return update.data;
+      case 'locationSummary':
+        return {
+          inventoryByLocation: [...update.data].sort((a, b) => b.value - a.value),
+        };
+      case 'topValueItems':
+        return {
+          topValueItems: update.data.map((item): TopItem => ({
+            itemId: item.itemId,
+            name: item.name,
+            location: item.location,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            value: item.value,
+          })),
+        };
+      case 'recentSales':
+        return {
+          recentSales: update.data,
+        };
+      case 'customerValueRanking':
+        return {
+          customerSummary: update.data.map((customer): CustomerSummary => ({
+            customerName: customer.customerName,
+            customerEmail: customer.customerEmail,
+            salesCount: customer.salesCount,
+            totalUnits: customer.totalUnits,
+            totalValue: customer.totalValue,
+          })),
+        };
+      case 'inventoryRiskExposure':
+        return {
+          atRiskItems: update.data.map((item): RiskItem => ({
+            itemId: item.itemId,
+            name: item.name,
+            location: item.location,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            atRiskValue: item.atRiskValue,
+            targetQuantity: item.targetQuantity,
+            riskScore: item.riskScore,
+            riskLevel: item.riskLevel,
+          })),
+        };
+      case 'error':
+        return {};
+    }
   }
 
 }
