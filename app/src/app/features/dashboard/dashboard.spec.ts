@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { TestRequest } from '@angular/common/http/testing';
 
 import { Dashboard } from './dashboard';
 import { CustomerValueRanking, InventoryRiskExposure, LocationInventorySummary, RecentSale, TopValueItem } from './dashboard-api.service';
@@ -11,6 +12,15 @@ const DEFAULT_SUMMARY = {
   totalSales: 0,
   submittedSales: 0,
   completedSales: 0,
+};
+
+type DashboardRequests = {
+  operationsSummary: TestRequest;
+  locationSummary: TestRequest;
+  topValueItems: TestRequest;
+  recentSales: TestRequest;
+  customerValueRanking: TestRequest;
+  inventoryRiskExposure: TestRequest;
 };
 
 describe('Dashboard', () => {
@@ -62,6 +72,17 @@ describe('Dashboard', () => {
       .flush(inventoryRiskExposureOverride);
   }
 
+  function expectDashboardRequests(): DashboardRequests {
+    return {
+      operationsSummary: httpMock.expectOne((req) => req.url.includes('/metrics/operations/summary')),
+      locationSummary: httpMock.expectOne((req) => req.url.includes('/inventory/locations/summary')),
+      topValueItems: httpMock.expectOne((req) => req.url.includes('/inventory/items/top-value')),
+      recentSales: httpMock.expectOne((req) => req.url.includes('/sales/recent')),
+      customerValueRanking: httpMock.expectOne((req) => req.url.includes('/customers/value-ranking')),
+      inventoryRiskExposure: httpMock.expectOne((req) => req.url.includes('/inventory/risk/exposure')),
+    };
+  }
+
   it('should create', async () => {
     flushRequests();
     await fixture.whenStable();
@@ -84,6 +105,28 @@ describe('Dashboard', () => {
     expect(model.totalSales).toBe(15);
     expect(model.submittedSales).toBe(5);
     expect(model.completedSales).toBe(10);
+  });
+
+  it('should update summary before the slower dashboard requests finish', () => {
+    const requests = expectDashboardRequests();
+
+    requests.operationsSummary.flush({
+      totalInventoryQuantity: 120,
+      totalInventoryValue: 4500,
+      totalSales: 15,
+      submittedSales: 5,
+      completedSales: 10,
+    });
+
+    expect(component.model().totalSales).toBe(15);
+    expect(component.model().inventoryByLocation).toEqual([]);
+    expect(component.loading()).toBe(true);
+
+    requests.locationSummary.flush([]);
+    requests.topValueItems.flush([]);
+    requests.recentSales.flush([]);
+    requests.customerValueRanking.flush([]);
+    requests.inventoryRiskExposure.flush([]);
   });
 
   it('should use backend-provided inventoryByLocation from /inventory/locations/summary', async () => {

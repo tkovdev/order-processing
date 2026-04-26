@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import { merge, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 export interface OperationsSummary {
@@ -58,6 +59,15 @@ export interface InventoryRiskExposure {
   riskLevel: string;
 }
 
+export type DashboardDataUpdate =
+  | { kind: 'operationsSummary'; data: OperationsSummary }
+  | { kind: 'locationSummary'; data: LocationInventorySummary[] }
+  | { kind: 'topValueItems'; data: TopValueItem[] }
+  | { kind: 'recentSales'; data: RecentSale[] }
+  | { kind: 'customerValueRanking'; data: CustomerValueRanking[] }
+  | { kind: 'inventoryRiskExposure'; data: InventoryRiskExposure[] }
+  | { kind: 'error'; error: unknown };
+
 @Injectable({
   providedIn: 'root',
 })
@@ -65,24 +75,34 @@ export class DashboardApiService {
   private readonly http = inject(HttpClient);
   private readonly apiBaseUrl = environment.apiBaseUrl;
 
-  fetchDashboardData() {
-    return forkJoin({
-      operationsSummary: this.http.get<OperationsSummary>(
-        `${this.apiBaseUrl}/metrics/operations/summary`,
+  fetchDashboardDataUpdates() {
+    return merge(
+      this.http.get<OperationsSummary>(`${this.apiBaseUrl}/metrics/operations/summary`).pipe(
+        map((data): DashboardDataUpdate => ({ kind: 'operationsSummary', data })),
+        catchError((error: unknown) => of({ kind: 'error', error } as const)),
       ),
-      locationSummary: this.http.get<LocationInventorySummary[]>(
-        `${this.apiBaseUrl}/inventory/locations/summary`,
+      this.http.get<LocationInventorySummary[]>(`${this.apiBaseUrl}/inventory/locations/summary`).pipe(
+        map((data): DashboardDataUpdate => ({ kind: 'locationSummary', data })),
+        catchError((error: unknown) => of({ kind: 'error', error } as const)),
       ),
-      topValueItems: this.http.get<TopValueItem[]>(
-        `${this.apiBaseUrl}/inventory/items/top-value?limit=5`,
+      this.http.get<TopValueItem[]>(`${this.apiBaseUrl}/inventory/items/top-value?limit=5`).pipe(
+        map((data): DashboardDataUpdate => ({ kind: 'topValueItems', data })),
+        catchError((error: unknown) => of({ kind: 'error', error } as const)),
       ),
-      recentSales: this.http.get<RecentSale[]>(`${this.apiBaseUrl}/sales/recent?limit=10`),
-      customerValueRanking: this.http.get<CustomerValueRanking[]>(
-        `${this.apiBaseUrl}/customers/value-ranking?limit=8`,
+      this.http.get<RecentSale[]>(`${this.apiBaseUrl}/sales/recent?limit=10`).pipe(
+        map((data): DashboardDataUpdate => ({ kind: 'recentSales', data })),
+        catchError((error: unknown) => of({ kind: 'error', error } as const)),
       ),
-      inventoryRiskExposure: this.http.get<InventoryRiskExposure[]>(
+      this.http.get<CustomerValueRanking[]>(`${this.apiBaseUrl}/customers/value-ranking?limit=8`).pipe(
+        map((data): DashboardDataUpdate => ({ kind: 'customerValueRanking', data })),
+        catchError((error: unknown) => of({ kind: 'error', error } as const)),
+      ),
+      this.http.get<InventoryRiskExposure[]>(
         `${this.apiBaseUrl}/inventory/risk/exposure?maxQty=20&minUnitPrice=100&limit=6`,
+      ).pipe(
+        map((data): DashboardDataUpdate => ({ kind: 'inventoryRiskExposure', data })),
+        catchError((error: unknown) => of({ kind: 'error', error } as const)),
       ),
-    });
+    );
   }
 }
