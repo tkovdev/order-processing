@@ -1,8 +1,9 @@
-import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output, inject } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { RouterLink } from "@angular/router";
 import { environment } from '../../../environments/environment';
 import { ChipModule } from 'primeng/chip';
+import { BreadcrumbService } from './breadcrumb.service';
 
 
 @Component({
@@ -12,13 +13,17 @@ import { ChipModule } from 'primeng/chip';
   styleUrl: './navigation.css',
 })
 export class Navigation implements OnInit {
+  private readonly breadcrumbService = inject(BreadcrumbService);
+
   sidebarOpen = false;
   isDesktop = false;
   environment = environment;
+  breadcrumbs = this.breadcrumbService.breadcrumbs;
   @Output() sidebarStateChange = new EventEmitter<boolean>();
 
   ngOnInit() {
     this.checkScreenSize();
+
     window.addEventListener('resize', () => this.checkScreenSize());
   }
 

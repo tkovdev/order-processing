@@ -5,6 +5,7 @@ import { Subject, merge, of } from 'rxjs';
 import { finalize, map, switchMap, takeUntil, tap } from 'rxjs/operators';
 import { DashboardApiService, DashboardDataUpdate } from './dashboard-api.service';
 import { CustomerSummary, DashboardViewModel, RiskItem, TopItem } from './models';
+import { BreadcrumbService } from '../../shared/navigation/breadcrumb.service';
 
 const EMPTY_MODEL: DashboardViewModel = {
   totalInventoryQuantity: 0,
@@ -27,6 +28,7 @@ const EMPTY_MODEL: DashboardViewModel = {
 })
 export class Dashboard implements OnInit, OnDestroy {
   private readonly dashboardApi = inject(DashboardApiService);
+  private readonly breadcrumbService = inject(BreadcrumbService);
   private readonly destroy$ = new Subject<void>();
   private readonly manualRefresh$ = new Subject<void>();
 
@@ -37,6 +39,10 @@ export class Dashboard implements OnInit, OnDestroy {
   model = signal<DashboardViewModel>(EMPTY_MODEL);
 
   ngOnInit(): void {
+    this.breadcrumbService.setBreadcrumbs([
+      { label: '', url: '/' },
+    ]);
+
     merge(of(null), this.manualRefresh$)
       .pipe(
         switchMap(() => this.fetchDashboardData()),
