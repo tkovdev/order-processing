@@ -180,6 +180,30 @@
 	color: #146534;
 }
 
+.risk-level-badge {
+	border-radius: 999px;
+	display: inline-block;
+	font-size: 0.75rem;
+	font-weight: 600;
+	padding: 0.2rem 0.55rem;
+	text-transform: capitalize;
+}
+
+.risk-level-badge.high {
+	background: #ffe5e8;
+	color: #981b2f;
+}
+
+.risk-level-badge.medium {
+	background: #fff0db;
+	color: #a46300;
+}
+
+.risk-level-badge.low {
+	background: #dffbe7;
+	color: #146534;
+}
+
 .rank-list,
 .risk-list {
 	display: grid;

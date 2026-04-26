@@ -46,6 +46,18 @@ export interface CustomerValueRanking {
   totalValue: number;
 }
 
+export interface InventoryRiskExposure {
+  itemId: string;
+  name: string;
+  location: string;
+  quantity: number;
+  unitPrice: number;
+  atRiskValue: number;
+  targetQuantity: number;
+  riskScore: number;
+  riskLevel: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -55,7 +67,6 @@ export class DashboardApiService {
 
   fetchDashboardData() {
     return forkJoin({
-      itemsResponse: this.http.get<{ items: unknown[] }>(`${this.apiBaseUrl}/items`),
       operationsSummary: this.http.get<OperationsSummary>(
         `${this.apiBaseUrl}/metrics/operations/summary`,
       ),
@@ -68,6 +79,9 @@ export class DashboardApiService {
       recentSales: this.http.get<RecentSale[]>(`${this.apiBaseUrl}/sales/recent?limit=10`),
       customerValueRanking: this.http.get<CustomerValueRanking[]>(
         `${this.apiBaseUrl}/customers/value-ranking?limit=8`,
+      ),
+      inventoryRiskExposure: this.http.get<InventoryRiskExposure[]>(
+        `${this.apiBaseUrl}/inventory/risk/exposure?maxQty=20&minUnitPrice=100&limit=6`,
       ),
     });
   }
