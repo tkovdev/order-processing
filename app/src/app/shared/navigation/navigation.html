@@ -14,6 +14,17 @@
         <h1 class="text-xl font-bold text-gray-800">Order Processing</h1>
       </div>
     </div>
+    <div class="hidden md:flex items-center text-sm text-gray-500 gap-1 flex-1 px-6 overflow-hidden whitespace-nowrap">
+      <span>/</span>
+      @for (crumb of breadcrumbs(); track crumb.url; let last = $last) {
+        <a [routerLink]="crumb.url" [ngClass]="last ? 'text-gray-800 font-medium truncate' : 'hover:text-blue-600 hover:underline'" class="transition-colors shrink-0">
+          {{ crumb.label }}
+        </a>
+        @if (!last) {
+          <span>/</span>
+        }
+      }
+    </div>
     
     <!-- Right: Profile & Settings (Future expansion area) -->
     <div class="flex items-center gap-4">
@@ -70,6 +81,13 @@
       class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors group">
       <i class="pi pi-list text-lg group-hover:text-blue-400 transition-colors"></i>
       <span class="font-medium">Items</span>
+    </a>
+
+    <a 
+      [routerLink]="['','locations']"
+      class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors group">
+      <i class="pi pi-warehouse text-lg group-hover:text-blue-400 transition-colors"></i>
+      <span class="font-medium">Locations</span>
     </a>
     
     <hr class="my-4 border-gray-700">

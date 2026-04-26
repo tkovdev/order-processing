@@ -1,0 +1,123 @@
+<section class="location-details-shell">
+  <header class="location-details-header">
+    <div>
+      <h1>{{ locationLabel }}</h1>
+      <p>Inventory profile and value concentration for this location.</p>
+    </div>
+
+    <button type="button" class="refresh-btn" (click)="refreshNow()" [disabled]="loading()">
+      Refresh
+    </button>
+  </header>
+
+  @if (errorMessage()) {
+    <div class="status-block error">
+      <i class="pi pi-exclamation-triangle"></i>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="status-block loading">
+      <p-progressspinner
+        class="location-spinner"
+        strokeWidth="5"
+        animationDuration="0.9s"
+        ariaLabel="Loading location detail"
+      ></p-progressspinner>
+      <span>Loading location inventory snapshot...</span>
+    </div>
+  }
+
+  @if (detail(); as detailData) {
+    <div class="kpi-grid">
+      <article class="kpi-card">
+        <div class="kpi-label">Item Types</div>
+        <div class="kpi-value">{{ stats().itemTypes | number }}</div>
+        <div class="kpi-footnote">Distinct inventory lines</div>
+      </article>
+
+      <article class="kpi-card">
+        <div class="kpi-label">Units In Stock</div>
+        <div class="kpi-value">{{ stats().totalUnits | number }}</div>
+        <div class="kpi-footnote">Current on-hand quantity</div>
+      </article>
+
+      <article class="kpi-card">
+        <div class="kpi-label">Location Value</div>
+        <div class="kpi-value">{{ stats().totalValue | currency }}</div>
+        <div class="kpi-footnote">Total inventory value</div>
+      </article>
+    </div>
+
+    <div class="content-grid">
+      <article class="panel">
+        <div class="panel-header">
+          <h2>Item Types At Location</h2>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Item Lines</th>
+              <th>Units</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let typeRow of detailData.typeBreakdown">
+              <td><strong>{{ formatTypeLabel(typeRow.type) }}</strong></td>
+              <td>{{ typeRow.itemCount | number }}</td>
+              <td>{{ typeRow.quantity | number }}</td>
+              <td>{{ typeRow.value | currency }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">
+          <h2>Demand Linkage (Coming Soon)</h2>
+        </div>
+
+        <p class="demand-copy">{{ demandNarrative() }}</p>
+
+        <ul class="demand-points">
+          <li>Inputs: recent sales by item type and current location availability.</li>
+          <li>Output: suggested fulfillment location based on coverage and demand pressure.</li>
+          <li>Current baseline: {{ totalItems() | number }} active item lines in this location.</li>
+        </ul>
+      </article>
+    </div>
+
+    <article class="panel">
+      <div class="panel-header">
+        <h2>Current Inventory At Location</h2>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>SKU</th>
+            <th>Type</th>
+            <th>Units</th>
+            <th>Unit Price</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of detailData.items">
+            <td><strong>{{ item.name }}</strong></td>
+            <td>{{ item.sku }}</td>
+            <td>{{ formatTypeLabel(item.type) }}</td>
+            <td>{{ item.quantity | number }}</td>
+            <td>{{ item.unitPrice | currency }}</td>
+            <td>{{ item.value | currency }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </article>
+  }
+</section>

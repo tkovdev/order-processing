@@ -68,7 +68,10 @@
 
 	<div class="dashboard-grid">
 		<article class="panel wide">
-			<h2>Stock by Location</h2>
+			<div class="panel-heading">
+				<h2>Stock by Location</h2>
+				<a class="panel-link" [routerLink]="['/locations']">View all locations</a>
+			</div>
 			@if (model().inventoryByLocation.length) {
 				<table class="data-table">
 					<thead>
@@ -81,7 +84,9 @@
 					</thead>
 					<tbody>
 						<tr *ngFor="let row of model().inventoryByLocation">
-							<td>{{ row.location }}</td>
+							<td>
+								<a class="location-link" [routerLink]="['/locations', toLocationSlug(row.location)]">{{ row.location }}</a>
+							</td>
 							<td>{{ row.itemCount | number }}</td>
 							<td>{{ row.quantity | number }}</td>
 							<td>{{ row.value | currency }}</td>

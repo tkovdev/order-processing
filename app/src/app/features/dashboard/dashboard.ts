@@ -1,10 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { Subject, merge, of } from 'rxjs';
 import { finalize, map, switchMap, takeUntil, tap } from 'rxjs/operators';
 import { DashboardApiService, DashboardDataUpdate } from './dashboard-api.service';
 import { CustomerSummary, DashboardViewModel, RiskItem, TopItem } from './models';
+import { BreadcrumbService } from '../../shared/navigation/breadcrumb.service';
 
 const EMPTY_MODEL: DashboardViewModel = {
   totalInventoryQuantity: 0,
@@ -21,12 +23,13 @@ const EMPTY_MODEL: DashboardViewModel = {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, ProgressSpinnerModule],
+  imports: [CommonModule, RouterLink, ProgressSpinnerModule],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
 export class Dashboard implements OnInit, OnDestroy {
   private readonly dashboardApi = inject(DashboardApiService);
+  private readonly breadcrumbService = inject(BreadcrumbService);
   private readonly destroy$ = new Subject<void>();
   private readonly manualRefresh$ = new Subject<void>();
 
@@ -37,6 +40,10 @@ export class Dashboard implements OnInit, OnDestroy {
   model = signal<DashboardViewModel>(EMPTY_MODEL);
 
   ngOnInit(): void {
+    this.breadcrumbService.setBreadcrumbs([
+      { label: '', url: '/' },
+    ]);
+
     merge(of(null), this.manualRefresh$)
       .pipe(
         switchMap(() => this.fetchDashboardData()),
@@ -52,6 +59,14 @@ export class Dashboard implements OnInit, OnDestroy {
 
   refreshNow(): void {
     this.manualRefresh$.next();
+  }
+
+  toLocationSlug(location: string): string {
+    return location
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
   }
 
   private fetchDashboardData() {

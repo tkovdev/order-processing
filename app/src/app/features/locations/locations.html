@@ -1,0 +1,134 @@
+<section class="locations-shell">
+	<header class="locations-header">
+		<div>
+			<h1>Locations</h1>
+			<p>Monitor inventory quantity and value across all facilities.</p>
+		</div>
+
+		<div class="header-actions">
+			<button type="button" class="refresh-btn" (click)="refreshNow()" [disabled]="loading()">
+				Refresh
+			</button>
+		</div>
+	</header>
+
+	@if (errorMessage()) {
+		<div class="status-block error">
+			<i class="pi pi-exclamation-triangle"></i>
+			<span>{{ errorMessage() }}</span>
+		</div>
+	}
+
+	@if (loading()) {
+		<div class="status-block loading">
+			<p-progressspinner
+				class="locations-spinner"
+				strokeWidth="5"
+				animationDuration="0.9s"
+				ariaLabel="Loading location data"
+			></p-progressspinner>
+			<span>Loading location inventory data...</span>
+		</div>
+	}
+
+	<div class="kpi-grid">
+		<article class="kpi-card">
+			<div class="kpi-label">Locations</div>
+			<div class="kpi-value">{{ totals().locationCount | number }}</div>
+			<div class="kpi-footnote">Active facilities</div>
+		</article>
+
+		<article class="kpi-card">
+			<div class="kpi-label">Item Types</div>
+			<div class="kpi-value">{{ totals().totalItemTypes | number }}</div>
+			<div class="kpi-footnote">Unique inventory lines</div>
+		</article>
+
+		<article class="kpi-card">
+			<div class="kpi-label">Units In Stock</div>
+			<div class="kpi-value">{{ totals().totalUnits | number }}</div>
+			<div class="kpi-footnote">Total quantity</div>
+		</article>
+
+		<article class="kpi-card">
+			<div class="kpi-label">Inventory Value</div>
+			<div class="kpi-value">{{ totals().totalValue | currency }}</div>
+			<div class="kpi-footnote">Across all locations</div>
+		</article>
+	</div>
+
+	<article class="panel">
+		<div class="panel-header">
+			<h2>Current Location Stock</h2>
+		</div>
+
+		@if (sortedLocationRows().length) {
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>
+							<button
+								type="button"
+								class="sortable-header"
+								[class.active]="isSortedBy('location')"
+								(click)="toggleSort('location')"
+							>
+								<span>Location</span>
+								<span class="sort-indicator">{{ getSortIndicator('location') }}</span>
+							</button>
+						</th>
+						<th>
+							<button
+								type="button"
+								class="sortable-header"
+								[class.active]="isSortedBy('itemCount')"
+								(click)="toggleSort('itemCount')"
+							>
+								<span>Item Types</span>
+								<span class="sort-indicator">{{ getSortIndicator('itemCount') }}</span>
+							</button>
+						</th>
+						<th>
+							<button
+								type="button"
+								class="sortable-header"
+								[class.active]="isSortedBy('quantity')"
+								(click)="toggleSort('quantity')"
+							>
+								<span>Units</span>
+								<span class="sort-indicator">{{ getSortIndicator('quantity') }}</span>
+							</button>
+						</th>
+						<th>
+							<button
+								type="button"
+								class="sortable-header"
+								[class.active]="isSortedBy('value')"
+								(click)="toggleSort('value')"
+							>
+								<span>Value</span>
+								<span class="sort-indicator">{{ getSortIndicator('value') }}</span>
+							</button>
+						</th>
+						<th class="right-align">Details</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr *ngFor="let row of sortedLocationRows()">
+						<td>
+							<strong>{{ row.location }}</strong>
+						</td>
+						<td>{{ row.itemCount | number }}</td>
+						<td>{{ row.quantity | number }}</td>
+						<td>{{ row.value | currency }}</td>
+						<td class="right-align">
+							<a class="detail-link" [routerLink]="['/locations', toLocationSlug(row.location)]">View location</a>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		} @else {
+			<p class="empty-state">No location inventory data available.</p>
+		}
+	</article>
+</section>
