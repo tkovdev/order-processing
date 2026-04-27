@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
@@ -29,6 +30,17 @@ export interface LocationInventoryDetail {
   typeBreakdown: LocationTypeSummary[];
 }
 
+export interface LocationInventorySummaryData {
+  itemCount: number;
+  totalUnits: number;
+  totalValue: number;
+}
+
+export interface LocationInventorySummaryResponse {
+  location: string;
+  inventorySummary: LocationInventorySummaryData;
+}
+
 interface ItemApiRecord {
   _id?: string;
   sku: string;
@@ -50,9 +62,22 @@ export class LocationDetailsApiService {
   private readonly http = inject(HttpClient);
   private readonly apiBaseUrl = environment.apiBaseUrl;
 
+  fetchLocationSummary(location: string) {
+    return this.http
+      .get<LocationInventorySummaryResponse[]>(
+        `${this.apiBaseUrl}/inventory/locations/${encodeURIComponent(location)}/summary`,
+      )
+      .pipe(
+        map((results) => results[0] ?? null),
+      );
+  }
+
   fetchLocationDetail(location: string) {
-    return this.http.get<ItemsApiResponse>(`${this.apiBaseUrl}/items`).pipe(
-      map((response) => {
+    return forkJoin([
+      this.fetchLocationSummary(location),
+      this.http.get<ItemsApiResponse>(`${this.apiBaseUrl}/items`),
+    ]).pipe(
+      map(([summary, response]) => {
         const locationItems = response.items
           .filter((item) => item.location.toLowerCase() === location.toLowerCase())
           .sort((left, right) => left.name.localeCompare(right.name));
@@ -86,12 +111,16 @@ export class LocationDetailsApiService {
         }
 
         const typeBreakdown = [...typeMap.values()].sort((left, right) => right.value - left.value);
-        const totalUnits = itemDetails.reduce((sum, item) => sum + item.quantity, 0);
-        const totalValue = itemDetails.reduce((sum, item) => sum + item.value, 0);
+
+        const itemCount = summary?.inventorySummary.itemCount ?? itemDetails.length;
+        const totalUnits = summary?.inventorySummary.totalUnits
+          ?? itemDetails.reduce((sum, item) => sum + item.quantity, 0);
+        const totalValue = summary?.inventorySummary.totalValue
+          ?? itemDetails.reduce((sum, item) => sum + item.value, 0);
 
         return {
           location,
-          itemCount: itemDetails.length,
+          itemCount,
           totalUnits,
           totalValue,
           items: itemDetails,

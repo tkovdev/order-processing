@@ -162,7 +162,7 @@ const getInventoryExposureRisk = async (req: Request, res: Response): Promise<vo
 
 }
 
-const getLocationOverviewByLocation = async (req: Request, res: Response): Promise<void> => {
+const getLocationSummaryByLocation = async (req: Request, res: Response): Promise<void> => {
   const schema = z.coerce.string();
   const parsedSchema = schema.safeParse(req.params.location);
   if (!parsedSchema.success) {
@@ -200,7 +200,7 @@ const getLocationOverviewByLocation = async (req: Request, res: Response): Promi
 
 // Register routes
 router.get('/locations/summary', getLocationInventorySummary);
-router.get('/locations/:location/overview', getLocationOverviewByLocation);
+router.get('/locations/:location/summary', getLocationSummaryByLocation);
 router.get('/items/top-value', getTopValueInventoryItems);
 router.get('/risk/exposure', getInventoryExposureRisk);
 
