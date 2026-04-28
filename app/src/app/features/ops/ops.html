@@ -1,0 +1,72 @@
+<section class="ops-shell">
+	<header class="ops-header">
+		<div>
+			<h1>Ops Pulse</h1>
+			<p>Operational status, timeline, and key performance indicators.</p>
+		</div>
+	</header>
+
+	@if (loading()) {
+		<div class="status-block loading">
+			<p-progressspinner
+				class="ops-spinner"
+				strokeWidth="5"
+				animationDuration="0.9s"
+				ariaLabel="Loading ops data"
+			></p-progressspinner>
+			<span>Loading operational data...</span>
+		</div>
+	}
+
+	<!-- Status Zone -->
+	<section class="ops-zone">
+		<h2 class="zone-title">
+			<i class="pi pi-circle-fill status-icon"></i>
+			System Status
+		</h2>
+		<div class="zone-body">
+			<p class="empty-state">No status data available yet.</p>
+		</div>
+	</section>
+
+	<!-- Timeline Zone -->
+	<section class="ops-zone">
+		<h2 class="zone-title">
+			<i class="pi pi-history"></i>
+			Activity Timeline
+		</h2>
+		<div class="zone-body">
+			<p class="empty-state">No timeline events to display.</p>
+		</div>
+	</section>
+
+	<!-- KPIs Zone -->
+	<section class="ops-zone">
+		<h2 class="zone-title">
+			<i class="pi pi-chart-line"></i>
+			Key Performance Indicators
+		</h2>
+		<div class="kpi-grid">
+			<article class="kpi-card">
+				<div class="kpi-label">Uptime</div>
+				<div class="kpi-value">—</div>
+				<div class="kpi-footnote">Awaiting data</div>
+			</article>
+			<article class="kpi-card">
+				<div class="kpi-label">Throughput</div>
+				<div class="kpi-value">—</div>
+				<div class="kpi-footnote">Awaiting data</div>
+			</article>
+			<article class="kpi-card">
+				<div class="kpi-label">Error Rate</div>
+				<div class="kpi-value">—</div>
+				<div class="kpi-footnote">Awaiting data</div>
+			</article>
+			<article class="kpi-card">
+				<div class="kpi-label">Latency (p95)</div>
+				<div class="kpi-value">—</div>
+				<div class="kpi-footnote">Awaiting data</div>
+			</article>
+		</div>
+	</section>
+</section>
