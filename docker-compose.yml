@@ -21,6 +21,34 @@ services:
       retries: 5
     restart: on-failure
 
+  docker-proxy:
+      image: tecnativa/docker-socket-proxy
+      container_name: docker-proxy
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock:ro
+      environment:
+        - INFO=1
+        - CONTAINERS=1  # Allow reading container info
+        - PING=1
+        # - NETWORKS=1    # Allow reading network info
+        # - SERVICES=1    # Allow reading service info
+      networks:
+        - app-network
+      read_only: true
+      tmpfs:
+        - /run
+        - /tmp
+      security_opt:
+        - no-new-privileges:true
+      cap_drop:
+        - ALL
+      healthcheck:
+        test: ["CMD-SHELL", "wget -q -O- http://localhost:2375/_ping | grep -q OK"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+        start_period: 5s
+
   api:
     build:
       context: ./api
@@ -33,12 +61,16 @@ services:
       - KAFKA_BROKER=kafka:29092
       - CORS_ORIGINS=http://localhost:4200,http://localhost:8080
       - HOSTED=true
+      - DOCKER_PROXY_HOST=docker-proxy
+      - DOCKER_PROXY_PORT=2375
     networks:
       - app-network
     depends_on:
       mongodb:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      docker-proxy:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "http://localhost:3300/health"]
@@ -54,6 +86,7 @@ services:
     environment:
       - KAFKA_BROKER=kafka:29092
       - DOCKER_NETWORK=order-processing_app-network
+      - HEALTHCHECK_FILE=/tmp/healthcheck
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
@@ -64,6 +97,12 @@ services:
       api: 
         condition: 
           service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "test -f \"$$HEALTHCHECK_FILE\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: on-failure
 
   sales:
@@ -73,6 +112,7 @@ services:
     environment:
       - KAFKA_BROKER=kafka:29092
       - DOCKER_NETWORK=order-processing_app-network
+      - HEALTHCHECK_FILE=/tmp/healthcheck
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
@@ -83,6 +123,12 @@ services:
       api: 
         condition: 
           service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "test -f \"$$HEALTHCHECK_FILE\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: on-failure
 
   shipping:
@@ -92,6 +138,7 @@ services:
     environment:
       - KAFKA_BROKER=kafka:29092
       - DOCKER_NETWORK=order-processing_app-network
+      - HEALTHCHECK_FILE=/tmp/healthcheck
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
@@ -102,7 +149,14 @@ services:
       api: 
         condition: 
           service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "test -f \"$$HEALTHCHECK_FILE\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: on-failure
+    
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     ports:
