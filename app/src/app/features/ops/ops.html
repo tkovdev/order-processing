@@ -4,6 +4,15 @@
 			<h1>Ops Pulse</h1>
 			<p>Operational status, timeline, and key performance indicators.</p>
 		</div>
+		<div class="header-actions">
+			@if (lastUpdated()) {
+				<span class="last-updated">Updated {{ lastUpdated() | date: 'HH:mm:ss' }}</span>
+			}
+			<button class="refresh-btn" (click)="refreshNow()" [disabled]="loading()">
+				<i class="pi pi-refresh"></i>
+				Refresh
+			</button>
+		</div>
 	</header>
 
 	@if (loading()) {
@@ -18,6 +27,13 @@
 		</div>
 	}
 
+	@if (errorMessage()) {
+		<div class="status-block warning" role="alert">
+			<i class="pi pi-exclamation-triangle"></i>
+			<span>{{ errorMessage() }}</span>
+		</div>
+	}
+
 	<!-- Status Zone -->
 	<section class="ops-zone">
 		<h2 class="zone-title">
@@ -25,7 +41,19 @@
 			System Status
 		</h2>
 		<div class="zone-body">
-			<p class="empty-state">No status data available yet.</p>
+			@if (!loading() && containers().length === 0 && !errorMessage()) {
+				<p class="empty-state">No status data available yet.</p>
+			} @else {
+				<div class="health-strip">
+					@for (container of containers(); track container.name) {
+						<div class="health-chip" [ngClass]="healthClass(container)">
+							<span class="chip-dot"></span>
+							<span class="chip-name">{{ container.name }}</span>
+							<span class="chip-badge">{{ healthLabel(container) }}</span>
+						</div>
+					}
+				</div>
+			}
 		</div>
 	</section>
 
