@@ -23,6 +23,41 @@
 	margin: 0.15rem 0 0;
 }
 
+.header-actions {
+	align-items: center;
+	display: flex;
+	gap: 0.75rem;
+}
+
+.last-updated {
+	color: #607197;
+	font-size: 0.8rem;
+}
+
+.refresh-btn {
+	align-items: center;
+	background: #fff;
+	border: 1px solid #dce8ff;
+	border-radius: 0.5rem;
+	color: #2d4375;
+	cursor: pointer;
+	display: inline-flex;
+	font-size: 0.85rem;
+	gap: 0.35rem;
+	padding: 0.35rem 0.75rem;
+	transition: background 0.15s, border-color 0.15s;
+}
+
+.refresh-btn:hover:not(:disabled) {
+	background: #eef4ff;
+	border-color: #b0c8ff;
+}
+
+.refresh-btn:disabled {
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
 .status-block {
 	align-items: center;
 	border-radius: 0.75rem;
@@ -35,6 +70,11 @@
 .status-block.loading {
 	background: #e8f3ff;
 	color: #1f4b77;
+}
+
+.status-block.warning {
+	background: #fff8e6;
+	color: #7c5700;
 }
 
 .ops-spinner {
@@ -115,6 +155,108 @@
 	color: #607197;
 	font-size: 0.9rem;
 	margin: 0;
+}
+
+.health-strip {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	width: 100%;
+}
+
+.health-chip {
+	align-items: center;
+	border: 1px solid #e6ecf8;
+	border-radius: 0.5rem;
+	display: inline-flex;
+	font-size: 0.85rem;
+	gap: 0.4rem;
+	padding: 0.35rem 0.7rem;
+}
+
+.chip-dot {
+	border-radius: 50%;
+	flex: 0 0 auto;
+	height: 0.5rem;
+	width: 0.5rem;
+}
+
+.chip-name {
+	color: #1a2950;
+	font-weight: 500;
+}
+
+.chip-badge {
+	color: #516189;
+	font-size: 0.78rem;
+}
+
+.health-chip.status-healthy {
+	background: #f0fdf4;
+	border-color: #bbf7d0;
+}
+
+.health-chip.status-healthy .chip-dot {
+	background: #22c55e;
+}
+
+.health-chip.status-healthy .chip-badge {
+	color: #15803d;
+}
+
+.health-chip.status-unhealthy {
+	background: #fef2f2;
+	border-color: #fecaca;
+}
+
+.health-chip.status-unhealthy .chip-dot {
+	background: #ef4444;
+}
+
+.health-chip.status-unhealthy .chip-badge {
+	color: #b91c1c;
+}
+
+.health-chip.status-starting {
+	background: #fffbeb;
+	border-color: #fed7aa;
+}
+
+.health-chip.status-starting .chip-dot {
+	background: #f59e0b;
+}
+
+.health-chip.status-starting .chip-badge {
+	color: #b45309;
+}
+
+.health-chip.status-running {
+	background: #eff6ff;
+	border-color: #bfdbfe;
+}
+
+.health-chip.status-running .chip-dot {
+	background: #3b82f6;
+}
+
+.health-chip.status-running .chip-badge {
+	color: #1d4ed8;
+}
+
+.health-chip.status-stopped,
+.health-chip.status-unknown {
+	background: #f8fafc;
+	border-color: #e2e8f0;
+}
+
+.health-chip.status-stopped .chip-dot,
+.health-chip.status-unknown .chip-dot {
+	background: #94a3b8;
+}
+
+.health-chip.status-stopped .chip-badge,
+.health-chip.status-unknown .chip-badge {
+	color: #64748b;
 }
 
 @media (max-width: 600px) {
