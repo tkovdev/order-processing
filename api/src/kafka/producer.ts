@@ -4,9 +4,10 @@ import { kafka } from './client';
 
 export const COMMAND_TOPIC = 'api.command';
 
-export interface APICommand {
+export interface ServiceCommand {
   commandId: string;
   type: string;
+  publisher: string;
   payload?: unknown;
   timestamp: string;
 }
@@ -28,12 +29,13 @@ export const disconnectProducer = async (): Promise<void> => {
 export const publishCommand = async (
   type: string,
   payload?: unknown
-): Promise<APICommand> => {
+): Promise<ServiceCommand> => {
   
-  const command: APICommand = {
+  const command: ServiceCommand = {
     commandId: randomUUID(),
     type,
     payload,
+    publisher: 'api',
     timestamp: new Date().toISOString(),
   };
 
