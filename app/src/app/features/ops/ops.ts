@@ -1,12 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { Subject, merge, of, timer } from 'rxjs';
+import { Subject, merge, of } from 'rxjs';
 import { catchError, finalize, map, switchMap, takeUntil, tap } from 'rxjs/operators';
 import { BreadcrumbService } from '../../shared/navigation/breadcrumb.service';
 import { ContainerStatus, KafkaEvent, OpsApiService } from './ops-api.service';
-
-const POLL_INTERVAL_MS = 30_000;
 
 export interface KafkaEventGroup {
   correlationId: string;
@@ -72,7 +70,7 @@ export class Ops implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.breadcrumbService.setBreadcrumbs([{ label: 'Ops Pulse', url: '/ops' }]);
 
-    merge(timer(0, POLL_INTERVAL_MS), this.manualRefresh$)
+    merge(of(null), this.manualRefresh$)
       .pipe(
         switchMap(() => merge(this.fetchContainerStatuses(), this.fetchKafkaEvents())),
         takeUntil(this.destroy$),
