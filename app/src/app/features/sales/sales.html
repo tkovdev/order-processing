@@ -1,0 +1,116 @@
+<section class="sales-shell">
+	<header class="sales-header">
+		<div>
+			<h1>Sales</h1>
+			<p>Revenue overview, transaction history, and sales performance.</p>
+		</div>
+	</header>
+
+	@if (loading()) {
+		<div class="status-block loading" role="status">
+			<p-progressspinner
+				class="sales-spinner"
+				strokeWidth="5"
+				animationDuration="0.9s"
+				ariaLabel="Loading sales data"
+			></p-progressspinner>
+			<span>Loading sales data...</span>
+		</div>
+	}
+
+	<!-- Stats Bar Zone -->
+	<section class="sales-zone">
+		<h2 class="zone-title">
+			<i class="pi pi-chart-line"></i>
+			Overview
+		</h2>
+		<div class="stats-grid">
+			<article class="stat-card">
+				<div class="stat-label">Total Revenue</div>
+				<div class="stat-value">—</div>
+				<div class="stat-footnote">Awaiting data</div>
+			</article>
+			<article class="stat-card">
+				<div class="stat-label">Orders</div>
+				<div class="stat-value">—</div>
+				<div class="stat-footnote">Awaiting data</div>
+			</article>
+			<article class="stat-card">
+				<div class="stat-label">Avg. Order Value</div>
+				<div class="stat-value">—</div>
+				<div class="stat-footnote">Awaiting data</div>
+			</article>
+			<article class="stat-card">
+				<div class="stat-label">Refunds</div>
+				<div class="stat-value">—</div>
+				<div class="stat-footnote">Awaiting data</div>
+			</article>
+		</div>
+	</section>
+
+	<!-- Filters Zone -->
+	<section class="sales-zone">
+		<h2 class="zone-title">
+			<i class="pi pi-filter"></i>
+			Filters
+		</h2>
+		<div class="filters-row">
+			<input
+				class="filter-input"
+				type="text"
+				placeholder="Search by order ID or customer…"
+				[value]="searchFilter()"
+				(input)="searchFilter.set($any($event.target).value)"
+				aria-label="Search sales"
+			/>
+			<select
+				class="filter-select"
+				aria-label="Filter by status"
+				(change)="statusFilter.set($any($event.target).value)"
+			>
+				<option value="">All statuses</option>
+				<option value="completed">Completed</option>
+				<option value="pending">Pending</option>
+				<option value="refunded">Refunded</option>
+				<option value="cancelled">Cancelled</option>
+			</select>
+			<input
+				class="filter-input filter-input--date"
+				type="date"
+				[value]="dateFilter()"
+				(input)="dateFilter.set($any($event.target).value)"
+				aria-label="Filter by date"
+			/>
+		</div>
+	</section>
+
+	<!-- Sales Table Zone -->
+	<section class="sales-zone">
+		<h2 class="zone-title">
+			<i class="pi pi-table"></i>
+			Transactions
+		</h2>
+		<div class="table-wrapper">
+			@if (!loading()) {
+				<table class="sales-table" aria-label="Sales transactions">
+					<thead>
+						<tr>
+							<th scope="col">Order ID</th>
+							<th scope="col">Customer</th>
+							<th scope="col">Date</th>
+							<th scope="col">Status</th>
+							<th scope="col" class="col-amount">Amount</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr class="empty-row">
+							<td colspan="5">
+								<span class="empty-state">No transactions to display yet.</span>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			}
+		</div>
+	</section>
+</section>
