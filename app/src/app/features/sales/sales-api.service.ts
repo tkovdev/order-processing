@@ -13,6 +13,25 @@ export interface RecentSale {
   totalValue: number;
 }
 
+export interface SaleLineItem {
+  _id: string;
+  itemId: string;
+  quantity: number;
+  price: number;
+}
+
+export interface SaleDetail {
+  _id: string;
+  status: string;
+  createdAt: string;
+  customer: {
+    name: string;
+    email: string;
+    address: string;
+  };
+  items: SaleLineItem[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -24,5 +43,16 @@ export class SalesApiService {
     return this.http.get<RecentSale[]>(`${this.apiBaseUrl}/sales/recent`, {
       params: { limit: limit.toString() },
     });
+  }
+
+  getSaleDetail(saleId: string) {
+    return this.http.get<SaleDetail>(`${this.apiBaseUrl}/sales/${saleId}`);
+  }
+
+  processSale(saleId: string) {
+    return this.http.post<{ message: string; sale: SaleDetail }>(
+      `${this.apiBaseUrl}/sales/${saleId}/process`,
+      {},
+    );
   }
 }

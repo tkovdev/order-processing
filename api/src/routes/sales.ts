@@ -49,6 +49,26 @@ const createSale = async (req: Request, res: Response): Promise<void> => {
 };
 
 
+const getSaleById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const sale = await SaleModel.findById(req.params.id);
+    if (!sale) {
+      res.status(404).json({ error: 'Sale not found' });
+      return;
+    }
+    res.status(200).json(sale);
+    return;
+  } catch (error) {
+    console.error('Error fetching sale:', error);
+    res.status(500).json({
+      error: 'Failed to fetch sale',
+      message: 'An internal server error occurred'
+    });
+    return;
+  }
+};
+
+
 const processSale = async (req: Request, res: Response): Promise<void> => {
   try {
     const sale = await SaleModel.findById(req.params.id);
@@ -138,5 +158,6 @@ router.get('/', getSales);
 router.post('/', createSale);
 router.post('/:id/process', processSale);
 router.get('/recent', recentSales);
+router.get('/:id', getSaleById);
 
 export default router;
