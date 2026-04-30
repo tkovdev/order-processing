@@ -154,6 +154,8 @@ const recentSales = async (req: Request, res: Response): Promise<void> => {
 };
 
 // Register routes
+// Note: specific routes (/recent) are registered before parameterised routes (/:id) so
+// that Express does not treat "recent" as a dynamic segment.
 router.get('/', getSales);
 router.post('/', createSale);
 router.post('/:id/process', processSale);
