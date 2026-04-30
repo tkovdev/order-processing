@@ -65,6 +65,6 @@ const getRecentKafkaMessages = async (req: Request, res: Response): Promise<void
 
 // Register routes
 router.get('/containers', getContianerStatuses);
-router.get('/kafka', getRecentKafkaMessages);
+router.get('/kafka/recent-events', getRecentKafkaMessages);
 
 export default router;
