@@ -63,8 +63,61 @@
 			<i class="pi pi-history"></i>
 			Activity Timeline
 		</h2>
-		<div class="zone-body">
-			<p class="empty-state">No timeline events to display.</p>
+		<div class="timeline-filters">
+			<select
+				class="filter-select"
+				aria-label="Filter by topic"
+				(change)="topicFilter.set($any($event.target).value)"
+			>
+				<option value="">All topics</option>
+				@for (topic of availableTopics(); track topic) {
+					<option [value]="topic">{{ topic }}</option>
+				}
+			</select>
+			<select
+				class="filter-select"
+				aria-label="Filter by type"
+				(change)="typeFilter.set($any($event.target).value)"
+			>
+				<option value="">All types</option>
+				@for (type of availableTypes(); track type) {
+					<option [value]="type">{{ type }}</option>
+				}
+			</select>
+			<input
+				class="filter-input"
+				type="text"
+				placeholder="Search correlation ID…"
+				[value]="correlationFilter()"
+				(input)="correlationFilter.set($any($event.target).value)"
+				aria-label="Search by correlation ID"
+			/>
+		</div>
+		<div class="zone-body" [class.zone-body--stack]="filteredGroups().length > 0">
+			@if (filteredGroups().length === 0) {
+				<p class="empty-state">No timeline events to display.</p>
+			} @else {
+				<ol class="timeline">
+					@for (group of filteredGroups(); track group.correlationId) {
+						<li class="timeline-group">
+							<div class="timeline-group-header">
+								<span class="correlation-id">{{ group.correlationId }}</span>
+								<span class="group-time">{{ group.latestTimestamp | date: 'HH:mm:ss' }}</span>
+							</div>
+							<ol class="event-list">
+								@for (event of group.events; track event.correlationId + '_' + event.timestamp + '_' + event.type + '_' + event.service) {
+									<li class="event-item">
+										<span class="event-time">{{ event.timestamp | date: 'HH:mm:ss.SSS' }}</span>
+										<span class="event-topic">{{ event.topic }}</span>
+										<span class="event-type">{{ event.type }}</span>
+										<span class="event-service">{{ event.service }}</span>
+									</li>
+								}
+							</ol>
+						</li>
+					}
+				</ol>
+			}
 		</div>
 	</section>
 

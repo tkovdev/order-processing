@@ -2,7 +2,13 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 
 import { Ops } from './ops';
-import { ContainerStatus, ContainerStatusResponse, OpsApiService } from './ops-api.service';
+import {
+  ContainerStatus,
+  ContainerStatusResponse,
+  KafkaEvent,
+  KafkaEventsResponse,
+  OpsApiService,
+} from './ops-api.service';
 
 const UPDATED_AT = '2026-04-28T12:00:00.000Z';
 
@@ -23,16 +29,38 @@ function makeResponse(
   return { services, updatedAt };
 }
 
+function makeKafkaEvent(overrides: Partial<KafkaEvent> = {}): KafkaEvent {
+  return {
+    correlationId: 'corr-1',
+    topic: 'orders.state',
+    type: 'ORDER_CREATED',
+    service: 'orders',
+    timestamp: '2026-04-28T12:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function makeKafkaResponse(
+  messages: KafkaEvent[] = [],
+  updatedAt = UPDATED_AT,
+): KafkaEventsResponse {
+  return { messages, updatedAt };
+}
+
 describe('Ops', () => {
   let component: Ops;
   let fixture: ComponentFixture<Ops>;
-  let opsApiSpy: { fetchContainerStatuses: ReturnType<typeof vi.fn> };
+  let opsApiSpy: {
+    fetchContainerStatuses: ReturnType<typeof vi.fn>;
+    fetchRecentKafkaEvents: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     vi.useFakeTimers();
 
     opsApiSpy = {
       fetchContainerStatuses: vi.fn().mockReturnValue(of(makeResponse())),
+      fetchRecentKafkaEvents: vi.fn().mockReturnValue(of(makeKafkaResponse())),
     };
 
     await TestBed.configureTestingModule({
@@ -123,7 +151,9 @@ describe('Ops', () => {
 
   it('should show empty state when API returns no services', () => {
     initAndFlush();
-    const emptyState: HTMLElement = fixture.nativeElement.querySelector('.empty-state');
+    const zones: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('.ops-zone');
+    const statusZone = zones[0];
+    const emptyState: HTMLElement | null = statusZone.querySelector('.empty-state');
     expect(emptyState).not.toBeNull();
   });
 
@@ -152,5 +182,141 @@ describe('Ops', () => {
     fixture.detectChanges();
 
     expect(opsApiSpy.fetchContainerStatuses).toHaveBeenCalledTimes(2);
+  });
+
+  // Timeline tests
+
+  it('should show empty timeline state when no kafka events are returned', () => {
+    opsApiSpy.fetchRecentKafkaEvents.mockReturnValue(of(makeKafkaResponse([])));
+    initAndFlush();
+    const zones: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('.ops-zone');
+    const timelineZone = zones[1];
+    const emptyState: HTMLElement | null = timelineZone.querySelector('.empty-state');
+    expect(emptyState).not.toBeNull();
+    expect(emptyState!.textContent).toContain('No timeline events to display.');
+  });
+
+  it('should render timeline groups when kafka events are present', () => {
+    opsApiSpy.fetchRecentKafkaEvents.mockReturnValue(
+      of(makeKafkaResponse([makeKafkaEvent()])),
+    );
+    initAndFlush();
+    const groups: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('.timeline-group');
+    expect(groups.length).toBe(1);
+  });
+
+  it('should group events under the same correlation ID', () => {
+    opsApiSpy.fetchRecentKafkaEvents.mockReturnValue(
+      of(makeKafkaResponse([
+        makeKafkaEvent({ correlationId: 'corr-1', type: 'ORDER_CREATED', timestamp: '2026-04-28T12:00:00.000Z' }),
+        makeKafkaEvent({ correlationId: 'corr-1', type: 'ORDER_PAID', timestamp: '2026-04-28T12:00:01.000Z' }),
+        makeKafkaEvent({ correlationId: 'corr-2', type: 'ORDER_CREATED', timestamp: '2026-04-28T12:00:02.000Z' }),
+      ])),
+    );
+    initAndFlush();
+    const groups: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('.timeline-group');
+    expect(groups.length).toBe(2);
+    const items: NodeListOf<HTMLElement> = groups[1].querySelectorAll('.event-item');
+    expect(items.length).toBe(2);
+  });
+
+  it('should sort groups so the most recently updated group appears first', () => {
+    opsApiSpy.fetchRecentKafkaEvents.mockReturnValue(
+      of(makeKafkaResponse([
+        makeKafkaEvent({ correlationId: 'older', timestamp: '2026-04-28T11:00:00.000Z' }),
+        makeKafkaEvent({ correlationId: 'newer', timestamp: '2026-04-28T13:00:00.000Z' }),
+      ])),
+    );
+    initAndFlush();
+    const headers: NodeListOf<HTMLElement> =
+      fixture.nativeElement.querySelectorAll('.correlation-id');
+    expect(headers[0].textContent?.trim()).toBe('newer');
+    expect(headers[1].textContent?.trim()).toBe('older');
+  });
+
+  it('should filter timeline events by topic', () => {
+    opsApiSpy.fetchRecentKafkaEvents.mockReturnValue(
+      of(makeKafkaResponse([
+        makeKafkaEvent({ correlationId: 'corr-1', topic: 'orders.state' }),
+        makeKafkaEvent({ correlationId: 'corr-2', topic: 'sales.state' }),
+      ])),
+    );
+    initAndFlush();
+
+    component.topicFilter.set('orders.state');
+    fixture.detectChanges();
+
+    const groups: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('.timeline-group');
+    expect(groups.length).toBe(1);
+    expect(groups[0].querySelector('.correlation-id')?.textContent?.trim()).toBe('corr-1');
+  });
+
+  it('should filter timeline events by type', () => {
+    opsApiSpy.fetchRecentKafkaEvents.mockReturnValue(
+      of(makeKafkaResponse([
+        makeKafkaEvent({ correlationId: 'corr-1', type: 'ORDER_CREATED' }),
+        makeKafkaEvent({ correlationId: 'corr-2', type: 'ORDER_SHIPPED' }),
+      ])),
+    );
+    initAndFlush();
+
+    component.typeFilter.set('ORDER_SHIPPED');
+    fixture.detectChanges();
+
+    const groups: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('.timeline-group');
+    expect(groups.length).toBe(1);
+    expect(groups[0].querySelector('.correlation-id')?.textContent?.trim()).toBe('corr-2');
+  });
+
+  it('should filter timeline events by partial correlation ID', () => {
+    opsApiSpy.fetchRecentKafkaEvents.mockReturnValue(
+      of(makeKafkaResponse([
+        makeKafkaEvent({ correlationId: 'abc-111' }),
+        makeKafkaEvent({ correlationId: 'xyz-999' }),
+      ])),
+    );
+    initAndFlush();
+
+    component.correlationFilter.set('abc');
+    fixture.detectChanges();
+
+    const groups: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('.timeline-group');
+    expect(groups.length).toBe(1);
+    expect(groups[0].querySelector('.correlation-id')?.textContent?.trim()).toBe('abc-111');
+  });
+
+  it('should show empty timeline state when filters match no events', () => {
+    opsApiSpy.fetchRecentKafkaEvents.mockReturnValue(
+      of(makeKafkaResponse([makeKafkaEvent({ topic: 'orders.state' })])),
+    );
+    initAndFlush();
+
+    component.topicFilter.set('nonexistent.topic');
+    fixture.detectChanges();
+
+    const zones: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('.ops-zone');
+    const timelineZone = zones[1];
+    const emptyState: HTMLElement | null = timelineZone.querySelector('.empty-state');
+    expect(emptyState).not.toBeNull();
+  });
+
+  it('should populate availableTopics and availableTypes from kafka events', () => {
+    opsApiSpy.fetchRecentKafkaEvents.mockReturnValue(
+      of(makeKafkaResponse([
+        makeKafkaEvent({ topic: 'orders.state', type: 'ORDER_CREATED' }),
+        makeKafkaEvent({ topic: 'sales.state', type: 'SALE_IN_PROGRESS' }),
+      ])),
+    );
+    initAndFlush();
+
+    expect(component.availableTopics()).toEqual(['orders.state', 'sales.state']);
+    expect(component.availableTypes()).toEqual(['ORDER_CREATED', 'SALE_IN_PROGRESS']);
+  });
+
+  it('should recover gracefully when kafka events fetch fails', () => {
+    opsApiSpy.fetchRecentKafkaEvents.mockReturnValue(throwError(() => new Error('Kafka error')));
+    initAndFlush();
+    expect(component.kafkaEvents()).toEqual([]);
+    expect(component.loading()).toBe(false);
   });
 });
