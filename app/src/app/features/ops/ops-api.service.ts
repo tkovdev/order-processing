@@ -14,6 +14,19 @@ export interface ContainerStatusResponse {
   updatedAt: string;
 }
 
+export interface KafkaEvent {
+  correlationId: string | undefined;
+  topic: string;
+  type: string;
+  service: string;
+  timestamp: string;
+}
+
+export interface KafkaEventsResponse {
+  messages: KafkaEvent[];
+  updatedAt: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -23,5 +36,11 @@ export class OpsApiService {
 
   fetchContainerStatuses() {
     return this.http.get<ContainerStatusResponse>(`${this.apiBaseUrl}/ops/containers`);
+  }
+
+  fetchRecentKafkaEvents(limit = 50) {
+    return this.http.get<KafkaEventsResponse>(`${this.apiBaseUrl}/ops/kafka/recent-events`, {
+      params: { limit: limit.toString() },
+    });
   }
 }
