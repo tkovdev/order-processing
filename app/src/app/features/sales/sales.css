@@ -37,6 +37,11 @@
 	color: #1f4b77;
 }
 
+.status-block.warning {
+	background: #fff8e1;
+	color: #7a5700;
+}
+
 .sales-spinner {
 	display: inline-flex;
 	flex: 0 0 auto;
@@ -174,6 +179,44 @@
 
 .col-amount {
 	text-align: right;
+}
+
+.col-right {
+	text-align: right;
+}
+
+.col-date {
+	white-space: nowrap;
+}
+
+.customer-name {
+	font-weight: 500;
+}
+
+.customer-email {
+	color: #607197;
+	font-size: 0.8rem;
+}
+
+.status-badge {
+	border-radius: 0.35rem;
+	display: inline-block;
+	font-size: 0.75rem;
+	font-weight: 600;
+	padding: 0.2rem 0.55rem;
+	text-transform: capitalize;
+	background: #e8f0fe;
+	color: #3155b5;
+}
+
+.status-badge--submitted {
+	background: #fff3cd;
+	color: #7a5700;
+}
+
+.status-badge--completed {
+	background: #d4edda;
+	color: #1a5c2e;
 }
 
 .empty-row td {

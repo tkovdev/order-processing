@@ -18,6 +18,13 @@
 		</div>
 	}
 
+	@if (errorMessage()) {
+		<div class="status-block warning" role="alert">
+			<i class="pi pi-exclamation-triangle"></i>
+			<span>{{ errorMessage() }}</span>
+		</div>
+	}
+
 	<!-- Stats Bar Zone -->
 	<section class="sales-zone">
 		<h2 class="zone-title">
@@ -84,32 +91,51 @@
 		</div>
 	</section>
 
-	<!-- Sales Table Zone -->
+	<!-- Recent Sales Table Zone -->
 	<section class="sales-zone">
 		<h2 class="zone-title">
 			<i class="pi pi-table"></i>
-			Transactions
+			Recent Sales
 		</h2>
 		<div class="table-wrapper">
 			@if (!loading()) {
-				<table class="sales-table" aria-label="Sales transactions">
-					<thead>
-						<tr>
-							<th scope="col">Order ID</th>
-							<th scope="col">Customer</th>
-							<th scope="col">Date</th>
-							<th scope="col">Status</th>
-							<th scope="col" class="col-amount">Amount</th>
-						</tr>
-					</thead>
-					<tbody>
-						<tr class="empty-row">
-							<td colspan="5">
-								<span class="empty-state">No transactions to display yet.</span>
-							</td>
-						</tr>
-					</tbody>
-				</table>
+				@if (recentSales().length) {
+					<table class="sales-table" aria-label="Recent sales">
+						<thead>
+							<tr>
+								<th scope="col">Date</th>
+								<th scope="col">Customer</th>
+								<th scope="col">Status</th>
+								<th scope="col" class="col-right">Lines</th>
+								<th scope="col" class="col-right">Units</th>
+								<th scope="col" class="col-right">Total Value</th>
+							</tr>
+						</thead>
+						<tbody>
+							@for (sale of recentSales(); track sale.saleId) {
+								<tr>
+									<td class="col-date">{{ sale.createdAt | date: 'dd MMM yyyy, HH:mm' }}</td>
+									<td>
+										<div class="customer-name">{{ sale.customerName }}</div>
+										<small class="customer-email">{{ sale.customerEmail }}</small>
+									</td>
+									<td>
+										<span
+											class="status-badge"
+											[class.status-badge--completed]="sale.status === 'completed'"
+											[class.status-badge--submitted]="sale.status === 'submitted'"
+										>{{ sale.status }}</span>
+									</td>
+									<td class="col-right">{{ sale.lineCount | number }}</td>
+									<td class="col-right">{{ sale.totalUnits | number }}</td>
+									<td class="col-right">{{ sale.totalValue | currency }}</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				} @else {
+					<p class="empty-state">No recent sales to display.</p>
+				}
 			}
 		</div>
 	</section>
