@@ -9,12 +9,21 @@ const kafka = new Kafka({ clientId: `sales-state`, brokers: [KAFKA_BROKER] });
 const consumer = kafka.consumer({ groupId: `sales-state` });
 const producer = kafka.producer();
 
+export interface ServiceCommand {
+  commandId: string;
+  type: string;
+  publisher: string;
+  payload?: unknown;
+  timestamp: string;
+}
+
 export async function publishState(type: string, payload?: string): Promise<void> {
     console.info(`stateHandler.publishState: send to producer for: '${topic}'`);
-    const command = {
+    const command: ServiceCommand = {
         commandId: randomUUID(),
         type,
         payload,
+        publisher: 'sales',
         timestamp: new Date().toISOString(),
     };
     await producer.send({

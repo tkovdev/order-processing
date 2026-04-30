@@ -4,6 +4,7 @@ import { connectToDatabase } from './db/connection';
 import { connectProducer, disconnectProducer } from './kafka/producer';
 import { initializeTopics } from './kafka/topics';
 import cors from 'cors';
+import { startRecentMessageBuffer } from './kafka/utilities';
 
 const app = express();
 const PORT = process.env.PORT || 4300;
@@ -44,13 +45,19 @@ async function start(): Promise<void> {
       console.error('Failed to initialize Kafka topics', err);
       process.exit(1);
     });
-    
-    await connectProducer().catch(err => {
-      console.error('Failed to connect Kafka producer', err);
-      process.exit(1);
-    });
   }
-  
+
+  await connectProducer().catch(err => {
+    console.error('Failed to connect Kafka producer', err);
+    process.exit(1);
+  });
+
+  await startRecentMessageBuffer().catch(err => {
+    console.error('Failed to connect Kafka recent message buffer', err);
+    process.exit(1);
+  });
+
+
   app.listen(PORT, () => {
     console.log(`API running on port ${PORT}`);
   });
