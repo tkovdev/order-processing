@@ -113,7 +113,7 @@
 						</thead>
 						<tbody>
 							@for (sale of recentSales(); track sale.saleId) {
-								<tr>
+								<tr class="sales-table-row" (click)="openDrawer(sale)" role="button" tabindex="0" (keyup.enter)="openDrawer(sale)" aria-label="View details for sale by {{ sale.customerName }}">
 									<td class="col-date">{{ sale.createdAt | date: 'dd MMM yyyy, HH:mm' }}</td>
 									<td>
 										<div class="customer-name">{{ sale.customerName }}</div>
@@ -140,3 +140,139 @@
 		</div>
 	</section>
 </section>
+
+<!-- Sale Detail Drawer -->
+@if (drawerOpen()) {
+	<div class="drawer-overlay" (click)="closeDrawer()" aria-hidden="true"></div>
+	<aside class="drawer" role="dialog" aria-modal="true" aria-label="Sale detail">
+		<header class="drawer-header">
+			<h2 class="drawer-title">
+				<i class="pi pi-receipt"></i>
+				Sale Detail
+			</h2>
+			<button class="drawer-close-btn" (click)="closeDrawer()" aria-label="Close drawer">
+				<i class="pi pi-times"></i>
+			</button>
+		</header>
+
+		@if (drawerLoading()) {
+			<div class="drawer-loading" role="status">
+				<p-progressspinner
+					class="sales-spinner"
+					strokeWidth="5"
+					animationDuration="0.9s"
+					ariaLabel="Loading sale details"
+				></p-progressspinner>
+				<span>Loading sale details...</span>
+			</div>
+		}
+
+		@if (processSuccess()) {
+			<div class="drawer-feedback drawer-feedback--success" role="status">
+				<i class="pi pi-check-circle"></i>
+				<span>{{ processSuccess() }}</span>
+			</div>
+		}
+
+		@if (processError()) {
+			<div class="drawer-feedback drawer-feedback--error" role="alert">
+				<i class="pi pi-exclamation-triangle"></i>
+				<span>{{ processError() }}</span>
+			</div>
+		}
+
+		@if (selectedSale(); as sale) {
+			<div class="drawer-body">
+				<!-- Customer Info -->
+				<section class="drawer-section">
+					<h3 class="drawer-section-title">Customer</h3>
+					<dl class="drawer-detail-list">
+						<div class="drawer-detail-row">
+							<dt>Name</dt>
+							<dd>{{ sale.customer.name }}</dd>
+						</div>
+						<div class="drawer-detail-row">
+							<dt>Email</dt>
+							<dd>{{ sale.customer.email }}</dd>
+						</div>
+						<div class="drawer-detail-row">
+							<dt>Address</dt>
+							<dd>{{ sale.customer.address }}</dd>
+						</div>
+					</dl>
+				</section>
+
+				<!-- Status & Date -->
+				<section class="drawer-section">
+					<h3 class="drawer-section-title">Order Info</h3>
+					<dl class="drawer-detail-list">
+						<div class="drawer-detail-row">
+							<dt>Status</dt>
+							<dd>
+								<span
+									class="status-badge"
+									[class.status-badge--completed]="sale.status === 'completed'"
+									[class.status-badge--submitted]="sale.status === 'submitted'"
+								>{{ sale.status }}</span>
+							</dd>
+						</div>
+						<div class="drawer-detail-row">
+							<dt>Date</dt>
+							<dd>{{ sale.createdAt | date: 'dd MMM yyyy, HH:mm' }}</dd>
+						</div>
+					</dl>
+				</section>
+
+				<!-- Line Items -->
+				<section class="drawer-section">
+					<h3 class="drawer-section-title">Line Items</h3>
+					<table class="drawer-items-table" aria-label="Line items">
+						<thead>
+							<tr>
+								<th scope="col">Item ID</th>
+								<th scope="col" class="col-right">Qty</th>
+								<th scope="col" class="col-right">Price</th>
+								<th scope="col" class="col-right">Subtotal</th>
+							</tr>
+						</thead>
+						<tbody>
+							@for (item of sale.items; track item._id) {
+								<tr>
+									<td class="item-id">{{ item.itemId }}</td>
+									<td class="col-right">{{ item.quantity | number }}</td>
+									<td class="col-right">{{ item.price | currency }}</td>
+									<td class="col-right">{{ item.quantity * item.price | currency }}</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</section>
+
+				<!-- Process Sale Action -->
+				@if (sale.status === 'submitted') {
+					<div class="drawer-action">
+						<button
+							class="btn-process"
+							[disabled]="processingLoading()"
+							(click)="onProcessSale(sale._id)"
+							aria-label="Process this sale"
+						>
+							@if (processingLoading()) {
+								<p-progressspinner
+									class="btn-spinner"
+									strokeWidth="5"
+									animationDuration="0.9s"
+									ariaLabel="Processing"
+								></p-progressspinner>
+								Processing…
+							} @else {
+								<i class="pi pi-play-circle"></i>
+								Process Sale
+							}
+						</button>
+					</div>
+				}
+			</div>
+		}
+	</aside>
+}
