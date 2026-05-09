@@ -5,3 +5,7 @@ dist/
 .DS_Store
 .vscode/
 environment.local.ts
+.env
+.terraform/
+.terraform.*
+*.tfstate*
